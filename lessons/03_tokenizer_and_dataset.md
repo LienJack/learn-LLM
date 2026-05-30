@@ -19,6 +19,10 @@
 5. batch 需要 padding、truncation、attention mask。
 6. 下一章问题：token id 只是编号，模型如何从编号中学出可更新的语义表示？
 
+<
+
+![03_tokenizer_and_dataset diagram 1](assets/03_tokenizer_and_dataset/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

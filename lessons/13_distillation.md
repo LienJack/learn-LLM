@@ -22,6 +22,10 @@ RAG 可以让强模型基于外部证据回答，但每次调用强模型都可�
 6. 蒸馏数据必须过滤 hallucination、格式错误和越界建议。
 7. 下一章问题：蒸馏后怎么证明 student 真的变好了？
 
+<
+
+![13_distillation diagram 1](assets/13_distillation/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

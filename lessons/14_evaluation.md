@@ -22,6 +22,10 @@
 6. 失败案例表比平均分更能指导下一轮数据和训练。
 7. 下一章问题：评测发现高风险边界后，如何写进安全、合规和 model card？
 
+<
+
+![14_evaluation diagram 1](assets/14_evaluation/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

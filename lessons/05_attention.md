@@ -33,6 +33,10 @@
 7. causal mask 禁止当前位置看到未来 token。
 8. 新边界：单头 attention 只是一次信息混合，完整 LLM block 还需要多头、残差、归一化和 FFN。
 
+<
+
+![05_attention diagram 1](assets/05_attention/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

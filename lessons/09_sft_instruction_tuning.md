@@ -26,6 +26,10 @@ SFT 的核心不是神奇地“让模型变聪明”，而是用高质量监督�
 6. 训练前后要比较同一 prompt 的行为，而不只看 loss。
 7. 下一章问题：SFT 全量更新成本高，能否只训练少量参数？
 
+<
+
+![09_sft_instruction_tuning diagram 1](assets/09_sft_instruction_tuning/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |
