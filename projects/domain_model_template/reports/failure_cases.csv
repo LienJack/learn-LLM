@@ -1,0 +1,2 @@
+eval_id,input,metric_failures,risk_tags,suspected_root_cause,next_action
+eval_001,example input,json_invalid,format,format_failure,fix output contract

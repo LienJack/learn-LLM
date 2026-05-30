@@ -1,0 +1,13 @@
+name: llm-from-zero
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - numpy
+  - jupyterlab
+  - pip
+  - pip:
+      - pytest>=8.0
+      - ruff>=0.8

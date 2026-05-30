@@ -1,0 +1,21 @@
+{
+  "run_id": "template_run_v1",
+  "base_model": "tiny-base@main",
+  "dataset_version": "sft_v1",
+  "eval_dataset_version": "eval_v1",
+  "rag_index_version": "kb_v1",
+  "model_version": "domain-model-v1",
+  "config_files": [
+    "configs/data.yaml",
+    "configs/eval.yaml",
+    "configs/serving.yaml"
+  ],
+  "report_files": [
+    "reports/data_quality_report.md",
+    "reports/eval_report.md",
+    "reports/failure_cases.csv",
+    "reports/risk_report.md",
+    "reports/model_card.md"
+  ],
+  "git_commit": "unknown"
+}

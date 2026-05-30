@@ -1,0 +1,24 @@
+project:
+  name: domain_model_template
+  domain: custom
+base_model:
+  model_id: tiny-base
+  revision: main
+data:
+  train_path: data/sft/train.jsonl
+  val_path: data/sft/val.jsonl
+  eval_path: data/eval/eval.jsonl
+  split_seed: 42
+training:
+  method: lora
+  learning_rate: 0.0002
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  max_seq_length: 2048
+rag:
+  index_version: kb_v1
+  chunk_size: 512
+  top_k: 5
+serving:
+  model_version: domain-model-v1
+  rollback_target: domain-model-v0
