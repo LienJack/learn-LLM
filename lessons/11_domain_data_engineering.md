@@ -22,6 +22,10 @@
 6. 数据版本必须能复现，否则模型版本不可解释。
 7. 下一章问题：即使数据进入模型参数，知识也会过期；如何让模型回答前先查资料？
 
+<
+
+![11_domain_data_engineering diagram 1](assets/11_domain_data_engineering/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

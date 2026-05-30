@@ -39,6 +39,10 @@ attention 如何变成可以深层堆叠、稳定训练的 LLM 基本模块？
 9. 新机制四：FFN 对每个位置独立做 MLP 变换。
 10. 下一章问题：有了可堆叠 block，如何把 embedding、position、block 和 lm head 组成完整 Mini GPT？
 
+<
+
+![06_transformer_block diagram 1](assets/06_transformer_block/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

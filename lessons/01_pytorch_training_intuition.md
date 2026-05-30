@@ -35,6 +35,10 @@ optimizer.step()
 6. tests 必须证明参数更新、loss 下降、评估无梯度和实验可复现。
 7. 下一章问题：分类训练闭环建立后，如何把目标改成序列 next-token prediction？
 
+<
+
+![01_pytorch_training_intuition diagram 1](assets/01_pytorch_training_intuition/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

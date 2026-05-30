@@ -25,6 +25,10 @@ LoRA 的核心思想是：冻结原模型权重，只训练低秩增量矩阵。
 9. QLoRA 用 4-bit quantized base model + LoRA 进一步降低显存。
 10. 下一章问题：adapter 训练再便宜，也救不了脏数据；领域能力来自什么样的数据工程？
 
+<
+
+![10_lora_qlora diagram 1](assets/10_lora_qlora/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

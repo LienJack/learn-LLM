@@ -22,6 +22,10 @@
 6. Checkpoint 不只是保存权重，还要保存配置、tokenizer、生成配置和必要训练状态。
 7. 下一章问题：现实中从零训练太贵，如何复用开源模型工作流？
 
+<
+
+![07_mini_gpt diagram 1](assets/07_mini_gpt/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

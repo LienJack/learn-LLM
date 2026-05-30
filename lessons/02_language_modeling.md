@@ -47,6 +47,10 @@
 6. 推理边界：训练时有真实前缀，生成时只能使用模型自己已经生成的 token。
 7. 新问题：模型需要的是 token id，但真实输入是字符串。下一章进入 Tokenizer 与 Dataset。
 
+<
+
+![02_language_modeling diagram 1](assets/02_language_modeling/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

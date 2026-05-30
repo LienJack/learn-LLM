@@ -22,6 +22,10 @@
 6. 人工 review 决定模型是否能进入真实流程。
 7. 下一章问题：安全边界明确后，模型如何低成本部署和监控？
 
+<
+
+![15_safety_and_model_card diagram 1](assets/15_safety_and_model_card/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

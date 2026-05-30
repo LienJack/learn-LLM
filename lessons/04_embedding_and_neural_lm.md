@@ -43,6 +43,10 @@ token id -> embedding -> causal context vector -> next-token logits
 7. 新边界二：固定平均或固定窗口不能动态决定“该看谁”。
 8. 下一章问题：如何让每个位置根据当前上下文动态选择信息来源？这会引出 causal self-attention。
 
+<
+
+![04_embedding_and_neural_lm diagram 1](assets/04_embedding_and_neural_lm/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

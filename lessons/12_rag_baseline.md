@@ -22,6 +22,10 @@ RAG 的核心不是“加一个向量数据库”，而是把回答过程拆成�
 6. Generator 只基于检索上下文回答，并输出 citation。
 7. 下一章问题：如果大模型调用成本高，能否用 teacher 生成数据训练 student？
 
+<
+
+![12_rag_baseline diagram 1](assets/12_rag_baseline/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

@@ -23,6 +23,10 @@
 7. 评测、安全和模型卡决定项目是否可演示或可上线。
 8. 下一章问题：同样的工程闭环如何迁移到医学科普助手？
 
+<
+
+![17_legal_domain_project diagram 1](assets/17_legal_domain_project/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

@@ -22,6 +22,10 @@
 6. 持续迭代依赖 regression eval 和 failure cases。
 7. 课程收束：从 tensor 训练闭环走到领域模型工程闭环。
 
+<
+
+![19_domain_model_template diagram 1](assets/19_domain_model_template/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |

@@ -23,6 +23,10 @@
 
 这样主线更清楚：量化回答“用什么格式跑”，服务化回答“如何可观测、可审计、可回滚地跑”。
 
+<
+
+![16_quantization_and_serving diagram 1](assets/16_quantization_and_serving/mermaid-01.png)
+
 ## 2. 问题链
 
 1. 原始状态：模型在 notebook 里能生成，但这不等于能服务真实请求。

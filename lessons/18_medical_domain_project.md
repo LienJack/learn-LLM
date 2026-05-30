@@ -31,6 +31,10 @@
 
 紧急症状不是普通问答任务。模型如果把胸痛、呼吸困难、意识异常当成一般科普问题处理，即使语气温和，也可能是安全失败。
 
+<
+
+![18_medical_domain_project diagram 1](assets/18_medical_domain_project/mermaid-01.png)
+
 ## 2. 问题链
 
 1. 用户医学问题常常包含不完整症状和高风险暗示。

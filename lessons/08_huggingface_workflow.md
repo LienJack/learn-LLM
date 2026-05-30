@@ -24,6 +24,10 @@
 6. Accelerate 处理设备、混合精度和分布式训练入口，但不能替代实验设计。
 7. 下一章问题：加载模型后，如何让它从“续写文本”变成“按指令回答”？
 
+<
+
+![08_huggingface_workflow diagram 1](assets/08_huggingface_workflow/mermaid-01.png)
+
 ## 3. Concept Card
 
 | 概念 | 数学对象 | Shape | 代码对象 | 实验对象 |
