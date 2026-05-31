@@ -153,9 +153,10 @@ else:
 
 手写规则的问题不是“规则不好”，而是规则无法覆盖复杂组合。于是我们引入可学习函数：
 
-```text
+<!-- formula-source: formula-001 sha256=382062db5b0d647a
 y = f(x; theta)
-```
+-->
+![math_foundations_deep_dive formula 1](assets/math_foundations_deep_dive/formula-001.png)
 
 这里 `theta` 是参数。它不是写死的规则，而是可以被数据调整的旋钮。
 
@@ -169,25 +170,28 @@ y = f(x; theta)
 
 在线性模型里：
 
-```text
+<!-- formula-source: formula-002 sha256=7bc9ec8cfc8f6caa
 y = wx + b
-```
+-->
+![math_foundations_deep_dive formula 2](assets/math_foundations_deep_dive/formula-002.png)
 
 `w` 控制斜率，`b` 控制平移。
 
 如果输入是二维合同特征：
 
-```text
+<!-- formula-source: formula-003 sha256=36cfd88d5c3d1688
 x = [违约金比例, 逾期天数]
 w = [w1, w2]
 score = x · w + b
-```
+-->
+![math_foundations_deep_dive formula 3](assets/math_foundations_deep_dive/formula-003.png)
 
 展开：
 
-```text
+<!-- formula-source: formula-004 sha256=2f324469e17483a1
 score = 违约金比例 * w1 + 逾期天数 * w2 + b
-```
+-->
+![math_foundations_deep_dive formula 4](assets/math_foundations_deep_dive/formula-004.png)
 
 这一步看起来简单，但后面所有神经网络都在重复类似结构：输入表示乘权重矩阵，加偏置或缩放，再进入下一层。
 
@@ -204,9 +208,10 @@ score = 违约金比例 * w1 + 逾期天数 * w2 + b
 
 最小更新公式：
 
-```text
+<!-- formula-source: formula-005 sha256=58dd6ea72fe14f33
 theta <- theta - learning_rate * gradient(loss, theta)
-```
+-->
+![math_foundations_deep_dive formula 5](assets/math_foundations_deep_dive/formula-005.png)
 
 这句公式后面藏着整个深度学习：
 
@@ -219,16 +224,18 @@ theta <- theta - learning_rate * gradient(loss, theta)
 
 如果每层都是线性函数：
 
-```text
+<!-- formula-source: formula-006 sha256=7bb5b5968200ca52
 f1(x) = W1x
 f2(h) = W2h
-```
+-->
+![math_foundations_deep_dive formula 6](assets/math_foundations_deep_dive/formula-006.png)
 
 叠起来仍然是线性的：
 
-```text
+<!-- formula-source: formula-007 sha256=4faf31c7f83467d8
 f2(f1(x)) = W2(W1x) = (W2W1)x
-```
+-->
+![math_foundations_deep_dive formula 7](assets/math_foundations_deep_dive/formula-007.png)
 
 所以在没有非线性激活、没有人工特征变换的前提下，很多层线性层仍然等价于一层线性层。它不能自动学出弯曲边界。
 
@@ -427,9 +434,10 @@ elif ...
 
 这就是：
 
-```text
+<!-- formula-source: formula-008 sha256=382062db5b0d647a
 y = f(x; theta)
-```
+-->
+![math_foundations_deep_dive formula 8](assets/math_foundations_deep_dive/formula-008.png)
 
 这里最重要的不是公式，而是思维方式变了：
 
@@ -446,10 +454,11 @@ y = f(x; theta)
 
 如果你手写规则，可能会写：
 
-```text
+<!-- formula-source: formula-009 sha256=3fdae8b2ecd51516
 if temperature >= 39:
     suggest_hospital
-```
+-->
+![math_foundations_deep_dive formula 9](assets/math_foundations_deep_dive/formula-009.png)
 
 但现实里还要看年龄、精神状态、持续时间、皮疹、呼吸、抽搐、基础病、是否能喝水。你不是在判断一个数，而是在判断一组变量形成的状态。
 
@@ -559,12 +568,13 @@ SVM 更关心：
 
 例如：
 
-```text
+<!-- formula-source: formula-010 sha256=8b7f913313705b46
 x = [1, 2]
 W = [[2, 0],
      [0, 1]]
 xW = [2, 2]
-```
+-->
+![math_foundations_deep_dive formula 10](assets/math_foundations_deep_dive/formula-010.png)
 
 这个矩阵把第一维拉伸 2 倍，第二维不变。
 
@@ -590,13 +600,14 @@ Attention 里的 `Wq/Wk/Wv` 就是三个不同投影：
 
 LLM 里的典型 shape：
 
-```text
+<!-- formula-source: formula-011 sha256=ef2a4ea35fd79797
 input_ids: [B,T]
 embedding: [B,T,C]
 q/k/v:     [B,H,T,D]
 scores:    [B,H,T,T]
 logits:    [B,T,V]
-```
+-->
+![math_foundations_deep_dive formula 11](assets/math_foundations_deep_dive/formula-011.png)
 
 这些不是随便堆的维度，而是语义维度：
 
@@ -626,7 +637,7 @@ loss 是否对齐正确位置？
 
 LoRA 可以写成低秩更新：
 
-```text
+<!-- formula-source: formula-012 sha256=1867c33ed704bdfa
 x: [B, d_in]
 W: [d_in, d_out]
 y = xW
@@ -636,7 +647,8 @@ B: [r, d_out]
 ΔW: [d_in, d_out]
 y = xW + (alpha / r) * xAB
 rank(A @ B) <= r
-```
+-->
+![math_foundations_deep_dive formula 12](assets/math_foundations_deep_dive/formula-012.png)
 
 这是本课程统一采用的教学约定。意思是：先把输入投影到一个很小的 rank-r 空间，再映射回输出空间。
 
@@ -662,9 +674,10 @@ rank(A @ B) <= r
 
 假设一次训练拿到 2 条法律样本，每条截断或 padding 到 6 个 token：
 
-```text
+<!-- formula-source: formula-013 sha256=c8bcaa7dbe455968
 input_ids: [B,T] = [2,6]
-```
+-->
+![math_foundations_deep_dive formula 13](assets/math_foundations_deep_dive/formula-013.png)
 
 查 embedding 表后，每个 token id 变成一个 `C` 维向量。假设 `C=4`：
 
@@ -688,28 +701,32 @@ q/k/v: [2,6,4]
 
 如果分成 `H=2` 个 head，每个 head 维度 `D=2`：
 
-```text
+<!-- formula-source: formula-014 sha256=001b5ccfbddbdabb
 q/k/v: [B,H,T,D] = [2,2,6,2]
-```
+-->
+![math_foundations_deep_dive formula 14](assets/math_foundations_deep_dive/formula-014.png)
 
 attention 分数是每个位置看每个位置：
 
-```text
+<!-- formula-source: formula-015 sha256=fea68d0a8d3e20d5
 scores = q @ k^T
 scores: [B,H,T,T] = [2,2,6,6]
-```
+-->
+![math_foundations_deep_dive formula 15](assets/math_foundations_deep_dive/formula-015.png)
 
 最后投到词表：
 
-```text
+<!-- formula-source: formula-016 sha256=295d87cf86fdb9e4
 logits: [B,T,V]
-```
+-->
+![math_foundations_deep_dive formula 16](assets/math_foundations_deep_dive/formula-016.png)
 
 训练 next-token 时，通常第 `t` 个位置的 logits 预测第 `t+1` 个 token，所以 label 要右移。这一步极容易出错：
 
-```text
+<!-- formula-source: formula-017 sha256=328428d7e9a2f5b9
 logits[:, :-1, :] 对齐 labels[:, 1:]
-```
+-->
+![math_foundations_deep_dive formula 17](assets/math_foundations_deep_dive/formula-017.png)
 
 这是通用说明。手写 MiniGPT 常在 dataset 里提前构造 `x=tokens[:-1]`、`y=tokens[1:]`，模型 forward 里就不要再二次 shift；Hugging Face `AutoModelForCausalLM` 通常在模型内部做 shift，collator 只需要提供与 `input_ids` 同形的 `labels`，非 assistant 区域置 `-100`。如果你把 label 和 logits 原位对齐，模型就可能学成“看到当前 token 预测当前 token”，loss 看起来下降，任务却错了。
 
@@ -771,11 +788,12 @@ embedding 是一个高维向量。
 
 假设你点奶茶，有三个维度：
 
-```text
+<!-- formula-source: formula-018 sha256=4d4672e8d09379b3
 甜度 = 3
 冰量 = 0
 茶味 = 5
-```
+-->
+![math_foundations_deep_dive formula 18](assets/math_foundations_deep_dive/formula-018.png)
 
 那这杯奶茶可以写成：
 
@@ -850,9 +868,10 @@ embedding 是一个高维向量。
 
 在神经网络里，一层线性层：
 
-```text
+<!-- formula-source: formula-019 sha256=803339744a62da71
 h = xW
-```
+-->
+![math_foundations_deep_dive formula 19](assets/math_foundations_deep_dive/formula-019.png)
 
 可以理解为：把输入空间变成另一个空间。变换前，某些方向可能表示“合同金额”；变换后，某些方向可能更适合判断“风险等级”。
 
@@ -880,20 +899,22 @@ value 身份：内容携带者
 
 Transformer 里常见的缩放点积 attention 写成：
 
-```text
+<!-- formula-source: formula-020 sha256=524f9652b0cfd4b0
 Attention(Q, K, V) = softmax(QK^T / sqrt(d_k)) V
-```
+-->
+![math_foundations_deep_dive formula 20](assets/math_foundations_deep_dive/formula-020.png)
 
 其中 `sqrt(d_k)` 不是装饰项。向量维度越高，未缩放点积的方差通常越大，Softmax 会更容易变得过尖，训练也更不稳定。
 
 从张量维度看，这一步像是在消去最后一个维度：
 
-```text
+<!-- formula-source: formula-021 sha256=3a92dc23e71e111f
 Q: [B,H,T,D]
 K^T: [B,H,D,T]
 QK^T: [B,H,T,T]
 softmax(QK^T / sqrt(D)) V -> [B,H,T,D]
-```
+-->
+![math_foundations_deep_dive formula 21](assets/math_foundations_deep_dive/formula-021.png)
 
 也就是说，每个 head 先得到一个 token 对 token 的匹配矩阵 `[T,T]`，再用这个匹配结果加权 `V`，才得到上下文融合后的表示。
 
@@ -919,29 +940,32 @@ LoRA 也在押一个类似的注：
 
 全量更新：
 
-```text
+<!-- formula-source: formula-022 sha256=258fce171e08d820
 ΔW: [4096,4096]
-```
+-->
+![math_foundations_deep_dive formula 22](assets/math_foundations_deep_dive/formula-022.png)
 
 表示每个输入方向都可以自由影响每个输出方向。自由度巨大，成本也巨大。
 
 LoRA 的教学写法是：
 
-```text
+<!-- formula-source: formula-023 sha256=3fc796ff8c8e4488
 x: [B, d_in]
 W: [d_in, d_out]
 W' = W + (alpha / r) * (A @ B)
 rank(A @ B) <= r
 base W frozen
-```
+-->
+![math_foundations_deep_dive formula 23](assets/math_foundations_deep_dive/formula-023.png)
 
 其中：
 
-```text
+<!-- formula-source: formula-024 sha256=0f72f25b411b2593
 A: [d_in, r]
 B: [r, d_out]
 A @ B: [d_in, d_out]
-```
+-->
+![math_foundations_deep_dive formula 24](assets/math_foundations_deep_dive/formula-024.png)
 
 PyTorch/PEFT 的源码常把 `weight` 存成 `[d_out, d_in]`，所以你会看到 `lora_A: [r, d_in]`、`lora_B: [d_out, r]`。那是实现存储口径，不改变这里的低秩数学口径。关键不是字母顺序，而是三件事：
 
@@ -981,30 +1005,33 @@ rank 太大：自由度太高，小数据上更容易记住偶然模式。
 
 点积：
 
-```text
+<!-- formula-source: formula-025 sha256=bf55feefcb78edb4
 a · b = Σ ai * bi
-```
+-->
+![math_foundations_deep_dive formula 25](assets/math_foundations_deep_dive/formula-025.png)
 
 如果两个向量方向一致、长度也大，点积会大。
 
 在 attention 中：
 
-```text
+<!-- formula-source: formula-026 sha256=c730d3e8829fc40a
 score = q · k
-```
+-->
+![math_foundations_deep_dive formula 26](assets/math_foundations_deep_dive/formula-026.png)
 
 表示 query 和 key 的匹配程度。
 
 但点积受长度影响：
 
-```text
+<!-- formula-source: formula-027 sha256=93b709fb3190556e
 a = [1, 0]
 b = [10, 0]
 c = [1, 1]
 
 a·b = 10
 a·c = 1
-```
+-->
+![math_foundations_deep_dive formula 27](assets/math_foundations_deep_dive/formula-027.png)
 
 `b` 的得分高，不只是方向同，也因为它长。
 
@@ -1012,9 +1039,10 @@ a·c = 1
 
 L2 norm：
 
-```text
+<!-- formula-source: formula-028 sha256=2a7fe0654752327c
 ||a|| = sqrt(Σ ai^2)
-```
+-->
+![math_foundations_deep_dive formula 28](assets/math_foundations_deep_dive/formula-028.png)
 
 范数有时表示强度，有时只是尺度差异。深度网络里，如果表示长度不断变大，后续 Softmax、梯度和优化都可能不稳定。
 
@@ -1022,9 +1050,10 @@ L2 norm：
 
 ### 3.3 余弦相似度：把长度影响除掉
 
-```text
+<!-- formula-source: formula-029 sha256=23b4ab111b9079df
 cos(a,b) = (a · b) / (||a|| ||b||)
-```
+-->
+![math_foundations_deep_dive formula 29](assets/math_foundations_deep_dive/formula-029.png)
 
 cosine 更关注方向。
 
@@ -1183,16 +1212,18 @@ chunk：胃酸反流可能导致胸口灼痛。
 
 语言模型预测：
 
-```text
+<!-- formula-source: formula-030 sha256=ea0d5ec7c36fd3ea
 P(token_t | token_<t)
-```
+-->
+![math_foundations_deep_dive formula 30](assets/math_foundations_deep_dive/formula-030.png)
 
 整句概率用链式分解：
 
-```text
+<!-- formula-source: formula-031 sha256=8891dcccce457340
 P(x1, x2, ..., xT)
 = P(x1) P(x2|x1) P(x3|x1,x2) ... P(xT|x_<T)
-```
+-->
+![math_foundations_deep_dive formula 31](assets/math_foundations_deep_dive/formula-031.png)
 
 这就是自回归语言模型的数学基础。
 
@@ -1207,15 +1238,17 @@ P(x1, x2, ..., xT)
 
 条件概率里最容易犯的错，是把方向看反：
 
-```text
+<!-- formula-source: formula-032 sha256=c6959e47546241db
 P(答案正确 | 模型很自信)
-```
+-->
+![math_foundations_deep_dive formula 32](assets/math_foundations_deep_dive/formula-032.png)
 
 和
 
-```text
+<!-- formula-source: formula-033 sha256=82a8b663da2cedfa
 P(模型很自信 | 答案正确)
-```
+-->
+![math_foundations_deep_dive formula 33](assets/math_foundations_deep_dive/formula-033.png)
 
 不是一回事。
 
@@ -1239,9 +1272,10 @@ LLM 里也一样：
 
 概率最容易被学成公式：
 
-```text
+<!-- formula-source: formula-034 sha256=644845f69dd3047a
 P(A|B) = P(A,B) / P(B)
-```
+-->
+![math_foundations_deep_dive formula 34](assets/math_foundations_deep_dive/formula-034.png)
 
 但在 LLM 项目里，更重要的是先问：概率到底在表达什么？
 
@@ -1304,15 +1338,17 @@ LLM 的 RAG 也可以这样看：
 
 模型输出 logits：
 
-```text
+<!-- formula-source: formula-035 sha256=b23b351af662e89e
 z = [2.0, 1.0, -1.0]
-```
+-->
+![math_foundations_deep_dive formula 35](assets/math_foundations_deep_dive/formula-035.png)
 
 Softmax：
 
-```text
+<!-- formula-source: formula-036 sha256=67761511d2de01b3
 p_i = exp(z_i) / Σ exp(z_j)
-```
+-->
+![math_foundations_deep_dive formula 36](assets/math_foundations_deep_dive/formula-036.png)
 
 它解决三个问题：
 
@@ -1322,9 +1358,10 @@ p_i = exp(z_i) / Σ exp(z_j)
 
 数值稳定写法：
 
-```text
+<!-- formula-source: formula-037 sha256=8b91f2253a39153c
 softmax(z) = softmax(z - max(z))
-```
+-->
+![math_foundations_deep_dive formula 37](assets/math_foundations_deep_dive/formula-037.png)
 
 因为减同一个常数不会改变概率，但能防止指数溢出。
 
@@ -1350,9 +1387,10 @@ Softmax 还有一个经常被忽略的前提：它适合互斥选择。
 
 这点对领域小模型很重要。如果你的输出字段是：
 
-```text
+<!-- formula-source: formula-038 sha256=94bf969187f0d393
 risk_tags = ["高额违约金", "管辖区不明", "需要人工复核"]
-```
+-->
+![math_foundations_deep_dive formula 38](assets/math_foundations_deep_dive/formula-038.png)
 
 它们也可能同时成立。训练和评测时不要把多标签风险误写成单选分类。
 
@@ -1378,9 +1416,10 @@ risk_tags = ["高额违约金", "管辖区不明", "需要人工复核"]
 
 这也解释了为什么 logits 的相对差距重要。假设：
 
-```text
+<!-- formula-source: formula-039 sha256=fe29bf81091f2eae
 logits = [10, 9, 1]
-```
+-->
+![math_foundations_deep_dive formula 39](assets/math_foundations_deep_dive/formula-039.png)
 
 第一个 token 比第二个高一点，比第三个高很多。Softmax 后，第一个和第二个会共享主要概率，第三个很低。模型不是简单地说“第一个分数是 10，所以概率是 10”，而是说：
 
@@ -1396,37 +1435,42 @@ logits = [10, 9, 1]
 
 最大化：
 
-```text
+<!-- formula-source: formula-040 sha256=5629f3df903449c2
 Π P(x_t | x_<t)
-```
+-->
+![math_foundations_deep_dive formula 40](assets/math_foundations_deep_dive/formula-040.png)
 
 取 log：
 
-```text
+<!-- formula-source: formula-041 sha256=002b5d753c42f62d
 Σ log P(x_t | x_<t)
-```
+-->
+![math_foundations_deep_dive formula 41](assets/math_foundations_deep_dive/formula-041.png)
 
 变成最小化负数：
 
-```text
+<!-- formula-source: formula-042 sha256=ae4da99e4503031f
 -Σ log P(x_t | x_<t)
-```
+-->
+![math_foundations_deep_dive formula 42](assets/math_foundations_deep_dive/formula-042.png)
 
 这就是交叉熵的来源。
 
 单 token 情况：
 
-```text
+<!-- formula-source: formula-043 sha256=c6a040b0d6d0358e
 loss = -log p_correct
-```
+-->
+![math_foundations_deep_dive formula 43](assets/math_foundations_deep_dive/formula-043.png)
 
 如果正确答案概率：
 
-```text
+<!-- formula-source: formula-044 sha256=50a87e2f81a1b36c
 0.9 -> loss ≈ 0.105
 0.1 -> loss ≈ 2.303
 0.01 -> loss ≈ 4.605
-```
+-->
+![math_foundations_deep_dive formula 44](assets/math_foundations_deep_dive/formula-044.png)
 
 模型越不相信正确 token，惩罚越大。
 
@@ -1507,23 +1551,26 @@ token loss 可能不高，但如果证据只支持“可能调整”，这个序
 
 Softmax 里有指数函数。指数函数增长极快：
 
-```text
+<!-- formula-source: formula-045 sha256=f75bff2dd30fff27
 exp(10) 约等于 22026
 exp(100) 已经非常大
 exp(1000) 通常直接溢出
-```
+-->
+![math_foundations_deep_dive formula 45](assets/math_foundations_deep_dive/formula-045.png)
 
 但 Softmax 有一个性质：
 
-```text
+<!-- formula-source: formula-046 sha256=3e6e63f4419a6512
 softmax(z) = softmax(z + c)
-```
+-->
+![math_foundations_deep_dive formula 46](assets/math_foundations_deep_dive/formula-046.png)
 
 对所有 logit 加同一个常数，概率不变。因此实现时通常减去最大值：
 
-```text
+<!-- formula-source: formula-047 sha256=7036b17c514ec9e8
 z_stable = z - max(z)
-```
+-->
+![math_foundations_deep_dive formula 47](assets/math_foundations_deep_dive/formula-047.png)
 
 这样最大 logit 变成 0，其它 logit 都小于等于 0，指数不会爆。
 
@@ -1554,9 +1601,10 @@ z_stable = z - max(z)
 
 熵：
 
-```text
+<!-- formula-source: formula-048 sha256=8f75fff670f5f845
 H(P) = -Σ p(x) log p(x)
-```
+-->
+![math_foundations_deep_dive formula 48](assets/math_foundations_deep_dive/formula-048.png)
 
 如果分布很尖：
 
@@ -1580,15 +1628,17 @@ H(P) = -Σ p(x) log p(x)
 
 交叉熵：
 
-```text
+<!-- formula-source: formula-049 sha256=9d94f2f4c5d67bb4
 H(P, Q) = -Σ p(x) log q(x)
-```
+-->
+![math_foundations_deep_dive formula 49](assets/math_foundations_deep_dive/formula-049.png)
 
 在普通 next-token 训练的单个样本上，我们通常把观测到的正确 token 当作 one-hot 标签：正确 token 概率 1，其他 0。于是交叉熵退化成：
 
-```text
+<!-- formula-source: formula-050 sha256=4acf3d75a077f87e
 -log q(correct)
-```
+-->
+![math_foundations_deep_dive formula 50](assets/math_foundations_deep_dive/formula-050.png)
 
 这就是语言模型 loss。但这只是经验训练目标的写法，不代表真实语言分布只有一个可能 token；同一个前缀下，现实里可能存在多个合理续写。
 
@@ -1608,9 +1658,10 @@ H(P, Q) = -Σ p(x) log q(x)
 
 当真实标签是 one-hot 时，二者落到同一个公式：
 
-```text
+<!-- formula-source: formula-051 sha256=52803a5811739312
 loss = -log q(correct_token)
-```
+-->
+![math_foundations_deep_dive formula 51](assets/math_foundations_deep_dive/formula-051.png)
 
 这能帮助你避免一个常见误会：交叉熵不是凭空冒出来的损失函数，而是“最大化真实数据概率”的另一种表达。它之所以适合语言模型，是因为语言模型本来就在输出 token 分布。
 
@@ -1618,15 +1669,17 @@ loss = -log q(correct_token)
 
 KL：
 
-```text
+<!-- formula-source: formula-052 sha256=efccbdd282224c95
 KL(P || Q) = Σ p(x) log(p(x) / q(x))
-```
+-->
+![math_foundations_deep_dive formula 52](assets/math_foundations_deep_dive/formula-052.png)
 
 也可以写成：
 
-```text
+<!-- formula-source: formula-053 sha256=d8b9eb60c10982a8
 KL(P || Q) = H(P, Q) - H(P)
-```
+-->
+![math_foundations_deep_dive formula 53](assets/math_foundations_deep_dive/formula-053.png)
 
 直观理解：
 
@@ -1634,16 +1687,18 @@ KL(P || Q) = H(P, Q) - H(P)
 
 KL 不对称：
 
-```text
+<!-- formula-source: formula-054 sha256=d2ee40921c934f18
 KL(P || Q) != KL(Q || P)
-```
+-->
+![math_foundations_deep_dive formula 54](assets/math_foundations_deep_dive/formula-054.png)
 
 这在蒸馏、偏好优化、策略约束里非常重要。不同方向的 KL 会导致不同的行为：
 
-```text
+<!-- formula-source: formula-055 sha256=277ce239dcd508be
 KL(P || Q)：P 有概率质量的地方，Q 不能给太低概率，偏 mode-covering。
 KL(Q || P)：Q 放概率质量的地方，P 也要认可，偏 mode-seeking。
-```
+-->
+![math_foundations_deep_dive formula 55](assets/math_foundations_deep_dive/formula-055.png)
 
 这是典型分布拟合场景下的直觉，不是所有神经网络训练现象的充分解释。实际行为还取决于模型族、样本覆盖、temperature、优化器、support 是否截断，以及是否存在零概率。
 
@@ -1651,21 +1706,23 @@ KL(Q || P)：Q 放概率质量的地方，P 也要认可，偏 mode-seeking。
 
 蒸馏不是只学 teacher 的最终文本，也可以学 teacher 的概率分布：
 
-```text
+<!-- formula-source: formula-056 sha256=767852b1948a4e12
 teacher logits -> teacher distribution
 student logits -> student distribution
 minimize KL(teacher || student)
-```
+-->
+![math_foundations_deep_dive formula 56](assets/math_foundations_deep_dive/formula-056.png)
 
 但领域蒸馏必须加证据约束。teacher 分布再漂亮，也不是事实来源。
 
 蒸馏里还常用 temperature 软化分布：
 
-```text
+<!-- formula-source: formula-057 sha256=510ffffc4a04b093
 p_teacher = softmax(z_teacher / τ)
 p_student = softmax(z_student / τ)
 loss = τ^2 * KL(p_teacher || p_student)
-```
+-->
+![math_foundations_deep_dive formula 57](assets/math_foundations_deep_dive/formula-057.png)
 
 `τ` 越大，分布越平，student 更容易看到 teacher 对“次优但相近答案”的相对偏好；`τ^2` 常用来补偿梯度尺度变化。这里用 `τ` 表示 temperature，避免和 sequence length `T_seq` 混淆。
 
@@ -1722,9 +1779,10 @@ teacher: [0.6, 0.3, 0.1]
 
 熵如果直接给公式，很容易变成记忆题：
 
-```text
+<!-- formula-source: formula-058 sha256=8f75fff670f5f845
 H(P) = -Σ p(x) log p(x)
-```
+-->
+![math_foundations_deep_dive formula 58](assets/math_foundations_deep_dive/formula-058.png)
 
 我们换一种路走。先问：一个事件发生后，它带来的信息量有多大？
 
@@ -1739,17 +1797,19 @@ H(P) = -Σ p(x) log p(x)
 
 数学上常用：
 
-```text
+<!-- formula-source: formula-059 sha256=152fe9a3f8d6f725
 I(x) = -log p(x)
-```
+-->
+![math_foundations_deep_dive formula 59](assets/math_foundations_deep_dive/formula-059.png)
 
 为什么有负号？因为 `p(x)` 在 0 到 1 之间，`log p(x)` 是负数，加负号后信息量变正。
 
 但一个系统的不确定性，不是只看某一个事件，而是看所有可能事件的平均信息量。于是自然得到：
 
-```text
+<!-- formula-source: formula-060 sha256=3b9e2d4db6aa8101
 H(P) = E[I(x)] = -Σ p(x) log p(x)
-```
+-->
+![math_foundations_deep_dive formula 60](assets/math_foundations_deep_dive/formula-060.png)
 
 这就是熵。它不是从天上掉下来的公式，而是：
 
@@ -1761,10 +1821,11 @@ H(P) = E[I(x)] = -Σ p(x) log p(x)
 
 举两个分布：
 
-```text
+<!-- formula-source: formula-061 sha256=a4fe0179bded9c34
 P1 = [0.5, 0.5]
 P2 = [0.99, 0.01]
-```
+-->
+![math_foundations_deep_dive formula 61](assets/math_foundations_deep_dive/formula-061.png)
 
 `P1` 更不确定，因为你真的不知道会是哪一个；`P2` 更确定，因为几乎总是第一个。对应地，`P1` 熵高，`P2` 熵低。
 
@@ -1790,9 +1851,10 @@ Q：模型分布
 
 这就是交叉熵：
 
-```text
+<!-- formula-source: formula-062 sha256=f1570f4acd9bcad8
 H(P,Q) = -Σ p(x) log q(x)
-```
+-->
+![math_foundations_deep_dive formula 62](assets/math_foundations_deep_dive/formula-062.png)
 
 如果 Q 在 P 经常发生的事件上给高概率，代价就低；如果 Q 在 P 经常发生的事件上给低概率，代价就高。
 
@@ -1804,9 +1866,10 @@ KL 散度则是在问：
 
 所以：
 
-```text
+<!-- formula-source: formula-063 sha256=708cc027c9db20a6
 KL(P || Q) = H(P,Q) - H(P)
-```
+-->
+![math_foundations_deep_dive formula 63](assets/math_foundations_deep_dive/formula-063.png)
 
 在单个监督训练样本上，我们通常把观测到的 token 视为 one-hot 标签；这只是经验训练写法，不代表真实语言分布只有一个合理 token。在这个训练写法下，`H(P)` 是固定的，最小化 KL 就等价于最小化交叉熵，也等价于提高正确 token 的概率。
 
@@ -1877,30 +1940,34 @@ dy/dx
 
 梯度是多参数情况下所有偏导数组成的向量：
 
-```text
+<!-- formula-source: formula-064 sha256=c93bf79dc81aa566
 gradient = [dL/dw1, dL/dw2, ..., dL/dwn]
-```
+-->
+![math_foundations_deep_dive formula 64](assets/math_foundations_deep_dive/formula-064.png)
 
 ### 6.1 链式法则：深度网络反传的核心
 
 如果：
 
-```text
+<!-- formula-source: formula-065 sha256=eba5aaab3f1e3c96
 z = f(y)
 y = g(x)
-```
+-->
+![math_foundations_deep_dive formula 65](assets/math_foundations_deep_dive/formula-065.png)
 
 那么：
 
-```text
+<!-- formula-source: formula-066 sha256=8a0d32a381d68079
 dz/dx = dz/dy * dy/dx
-```
+-->
+![math_foundations_deep_dive formula 66](assets/math_foundations_deep_dive/formula-066.png)
 
 深度网络就是很多函数复合：
 
-```text
+<!-- formula-source: formula-067 sha256=0bcdc0b64d171729
 x -> embedding -> attention -> ffn -> logits -> loss
-```
+-->
+![math_foundations_deep_dive formula 67](assets/math_foundations_deep_dive/formula-067.png)
 
 反向传播就是沿这条复合链应用链式法则。
 
@@ -1920,9 +1987,10 @@ parameters -> operations -> loss
 
 数值梯度：
 
-```text
+<!-- formula-source: formula-068 sha256=6c7e9eb233ccf9d8
 dL/dθ ≈ [L(θ + ε) - L(θ - ε)] / (2ε)
-```
+-->
+![math_foundations_deep_dive formula 68](assets/math_foundations_deep_dive/formula-068.png)
 
 它很慢，不用于训练，但适合检查自定义算子、mask、loss 是否实现正确。
 
@@ -1932,11 +2000,12 @@ dL/dθ ≈ [L(θ + ε) - L(θ - ε)] / (2ε)
 
 把一小段网络写成：
 
-```text
+<!-- formula-source: formula-069 sha256=f78ba5d2cdf67a3f
 h = gelu(xW1)
 logits = hW2
 loss = CE(logits, y)
-```
+-->
+![math_foundations_deep_dive formula 69](assets/math_foundations_deep_dive/formula-069.png)
 
 反向传播要回答：
 
@@ -1947,9 +2016,10 @@ W1 对 loss 贡献多少？
 
 `W2` 离 loss 近，梯度比较直接。`W1` 离 loss 远，需要经过：
 
-```text
+<!-- formula-source: formula-070 sha256=ab377cbfd5f2582b
 loss -> logits -> h -> gelu -> xW1 -> W1
-```
+-->
+![math_foundations_deep_dive formula 70](assets/math_foundations_deep_dive/formula-070.png)
 
 每一段都乘上局部导数，这就是链式法则。深层网络不是神秘地“知道”参数怎么改，而是把很多局部变化率乘起来。
 
@@ -1962,9 +2032,10 @@ loss -> logits -> h -> gelu -> xW1 -> W1
 
 语言模型里还有一个非常关键的简化结论：Softmax 接 cross entropy 后，对 logit `z_i` 的梯度是：
 
-```text
+<!-- formula-source: formula-071 sha256=c26c82cb10b2793f
 dL/dz_i = p_i - y_i
-```
+-->
+![math_foundations_deep_dive formula 71](assets/math_foundations_deep_dive/formula-071.png)
 
 其中 `p_i` 是模型分布，`y_i` 是 one-hot 标签。正确 token 的概率不够高时，`p_i - y_i` 为负，梯度更新会把它往上推；错误 token 概率太高时，梯度会把它往下压。这就是“让真实 token 概率变高”的反向传播版本。
 
@@ -1982,11 +2053,12 @@ dL/dz_i = p_i - y_i
 
 LoRA 训练里尤其要检查：
 
-```text
+<!-- formula-source: formula-072 sha256=a2c52cc7bb9f3795
 base_model 参数 requires_grad=False
 lora_A / lora_B 参数 requires_grad=True
 loss.backward() 后 LoRA 参数 grad 不为 None
-```
+-->
+![math_foundations_deep_dive formula 72](assets/math_foundations_deep_dive/formula-072.png)
 
 如果 LoRA 参数没有梯度，训练跑一晚上也只是空转。
 
@@ -1994,9 +2066,10 @@ loss.backward() 后 LoRA 参数 grad 不为 None
 
 有限差分虽然慢，但适合验证小模块。比如你手写了一个 masked attention，可以构造极小输入：
 
-```text
+<!-- formula-source: formula-073 sha256=0f2218a06123225c
 B=1, T=3, C=2
-```
+-->
+![math_foundations_deep_dive formula 73](assets/math_foundations_deep_dive/formula-073.png)
 
 然后比较 autograd 梯度和数值梯度。如果差异很大，可能是：
 
@@ -2022,9 +2095,10 @@ B=1, T=3, C=2
 
 第二，计算机不可能走无限小步。你必须选一个学习率：
 
-```text
+<!-- formula-source: formula-074 sha256=74206703291c072c
 theta <- theta - lr * grad
-```
+-->
+![math_foundations_deep_dive formula 74](assets/math_foundations_deep_dive/formula-074.png)
 
 如果步子很小，路径贴近曲面，但走得慢；如果步子很大，可能越过谷底，甚至跑到更高的地方。
 
@@ -2044,9 +2118,10 @@ mini-batch SGD/AdamW：有噪声，但可承受。
 
 把模型看成一条生产线：
 
-```text
+<!-- formula-source: formula-075 sha256=1205f5ef0caafab9
 token -> embedding -> attention -> FFN -> logits -> loss
-```
+-->
+![math_foundations_deep_dive formula 75](assets/math_foundations_deep_dive/formula-075.png)
 
 loss 是最后的投诉：
 
@@ -2056,13 +2131,14 @@ loss 是最后的投诉：
 
 反向传播要做的是把这个投诉分摊回每个环节：
 
-```text
+<!-- formula-source: formula-076 sha256=a5d513a8c374f978
 logits 对错误贡献多少？
 FFN 对 logits 贡献多少？
 attention 对 FFN 输入贡献多少？
 embedding 对 attention 输入贡献多少？
 每个参数对自己所在环节贡献多少？
-```
+-->
+![math_foundations_deep_dive formula 76](assets/math_foundations_deep_dive/formula-076.png)
 
 链式法则就是责任分摊的数学版本。每一层只需要知道两个东西：
 
@@ -2093,9 +2169,10 @@ embedding 对 attention 输入贡献多少？
 
 最小梯度下降：
 
-```text
+<!-- formula-source: formula-077 sha256=65aa02c354d8dcbe
 θ <- θ - lr * grad
-```
+-->
+![math_foundations_deep_dive formula 77](assets/math_foundations_deep_dive/formula-077.png)
 
 但真实训练还会遇到：
 
@@ -2111,10 +2188,11 @@ SGD 每步按当前 batch 梯度更新。
 
 Momentum 会累计过去方向，减少抖动：
 
-```text
+<!-- formula-source: formula-078 sha256=057d2b203c11992f
 v <- beta * v + grad
 θ <- θ - lr * v
-```
+-->
+![math_foundations_deep_dive formula 78](assets/math_foundations_deep_dive/formula-078.png)
 
 Adam/AdamW 会估计一阶矩和二阶矩，给不同参数自适应步长。
 
@@ -2124,15 +2202,17 @@ AdamW 把 weight decay 从 Adam 的梯度更新里解耦出来，是现代 Trans
 
 如果 loss 写成整个训练集上的平均：
 
-```text
+<!-- formula-source: formula-079 sha256=0df8d1f69ba235f0
 L(theta) = (1/N) Σ loss_i(theta)
-```
+-->
+![math_foundations_deep_dive formula 79](assets/math_foundations_deep_dive/formula-079.png)
 
 每更新一步都遍历全部样本，计算量太大。SGD 的想法是：随机抽一个样本或一个 mini-batch，用它来估计整体梯度。
 
-```text
+<!-- formula-source: formula-080 sha256=a3feda6e7c296858
 full gradient ≈ mini-batch gradient
-```
+-->
+![math_foundations_deep_dive formula 80](assets/math_foundations_deep_dive/formula-080.png)
 
 这个估计有噪声，但便宜得多。噪声不全是坏事，它有时还能帮助模型跳出某些尖锐区域。不过噪声太大也会让训练不稳定，所以 batch size、learning rate、梯度累积经常要一起调。
 
@@ -2159,9 +2239,10 @@ Adam/RMSprop/AdaGrad 这类方法进一步关心“不同参数的尺度不同�
 
 梯度裁剪限制 gradient norm：
 
-```text
+<!-- formula-source: formula-081 sha256=48099098778d8644
 如果 ||grad|| > threshold，就按比例缩小
-```
+-->
+![math_foundations_deep_dive formula 81](assets/math_foundations_deep_dive/formula-081.png)
 
 这不是让模型更聪明，而是防止一步更新太猛。
 
@@ -2210,11 +2291,12 @@ AdamW 的自适应步长让训练更省心，但它不会替你解决目标错�
 
 最小化地看，AdamW 做了两件事：用一阶矩估计平滑方向，用二阶矩估计调节每个参数的有效步长，并把 weight decay 从梯度更新里解耦出来：
 
-```text
+<!-- formula-source: formula-082 sha256=067b93cb3fcf1d09
 m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
 v_t = beta2 * v_{t-1} + (1 - beta2) * g_t^2
 theta <- theta - lr * m_hat / (sqrt(v_hat) + eps) - lr * wd * theta
-```
+-->
+![math_foundations_deep_dive formula 82](assets/math_foundations_deep_dive/formula-082.png)
 
 这里的 `m_hat`、`v_hat` 通常表示经过 bias correction 的一阶、二阶矩估计。前半段是“不同参数用不同有效步长”，最后一项是“直接衰减权重”。这就是 AdamW 和把 L2 惩罚混进梯度里的传统 Adam 变体不完全一样的地方。
 
@@ -2320,9 +2402,10 @@ SVM 里“最大间隔”就是一种结构风险思想：不是只要分对训�
 
 完整训练集 loss 是：
 
-```text
+<!-- formula-source: formula-083 sha256=0df8d1f69ba235f0
 L(theta) = (1/N) Σ loss_i(theta)
-```
+-->
+![math_foundations_deep_dive formula 83](assets/math_foundations_deep_dive/formula-083.png)
 
 从形式上看，每一步都应该把所有样本算一遍。可是 LLM 数据可能有几十亿 token。每走一步都看完整数据，就像你想知道全国平均身高，却坚持每次都量完整个国家，根本不现实。
 
@@ -2358,9 +2441,10 @@ SGD 也是这个思路：
 
 L1/L2 正则化可以从公式看：
 
-```text
+<!-- formula-source: formula-084 sha256=a526e474071a6d3a
 loss = data_loss + lambda * ||W||
-```
+-->
+![math_foundations_deep_dive formula 84](assets/math_foundations_deep_dive/formula-084.png)
 
 但例文里更重要的讲法是几何直觉：权重 `W` 是高维空间里的一个点，正则化是在限制这个点离原点不要太远。
 
@@ -2454,9 +2538,10 @@ Transformer 能堆深，不只是因为 attention。
 
 残差：
 
-```text
+<!-- formula-source: formula-085 sha256=3f7bb67bd494dd00
 x_next = x + F(x)
-```
+-->
+![math_foundations_deep_dive formula 85](assets/math_foundations_deep_dive/formula-085.png)
 
 直觉：
 
@@ -2467,10 +2552,11 @@ x_next = x + F(x)
 
 从梯度看，残差也很直观：
 
-```text
+<!-- formula-source: formula-086 sha256=1acb11656c08072a
 y = x + F(x)
 dL/dx = dL/dy * (I + dF/dx)
-```
+-->
+![math_foundations_deep_dive formula 86](assets/math_foundations_deep_dive/formula-086.png)
 
 即使 `F(x)` 这条分支一开始学得不好，`I` 这条 identity path 仍然给信息和梯度留了一条直路。它不像每层都把前面表示扔掉重算，更像在已有表示上补一棒。
 
@@ -2480,15 +2566,17 @@ dL/dx = dL/dy * (I + dF/dx)
 
 LayerNorm：
 
-```text
+<!-- formula-source: formula-087 sha256=e8eb771276f1bbf6
 LayerNorm(x) = gamma * (x - mean(x)) / sqrt(var(x) + eps) + beta
-```
+-->
+![math_foundations_deep_dive formula 87](assets/math_foundations_deep_dive/formula-087.png)
 
 RMSNorm：
 
-```text
+<!-- formula-source: formula-088 sha256=c0b12bab16f538bb
 RMSNorm(x) = gamma * x / sqrt(mean(x^2) + eps)
-```
+-->
+![math_foundations_deep_dive formula 88](assets/math_foundations_deep_dive/formula-088.png)
 
 这里的 `mean/var` 通常沿 hidden dimension 计算，而不是沿 batch 计算；这点很重要，否则初学者容易把 LayerNorm 和 BatchNorm 混在一起。RMSNorm 不减均值，也没有 `beta` 平移项，更简单，是 LLaMA 风格模型常见选择。
 
@@ -2496,10 +2584,11 @@ RMSNorm(x) = gamma * x / sqrt(mean(x^2) + eps)
 
 Pre-Norm：
 
-```text
+<!-- formula-source: formula-089 sha256=e13da337c4a72fa2
 x = x + Attention(Norm(x))
 x = x + FFN(Norm(x))
-```
+-->
+![math_foundations_deep_dive formula 89](assets/math_foundations_deep_dive/formula-089.png)
 
 相比 Post-Norm，Pre-Norm 往往让深层训练更稳定，因为梯度可以更顺畅地沿残差路径传播。
 
@@ -2514,9 +2603,10 @@ x = x + FFN(Norm(x))
 
 残差连接的形式：
 
-```text
+<!-- formula-source: formula-090 sha256=3f7bb67bd494dd00
 x_next = x + F(x)
-```
+-->
+![math_foundations_deep_dive formula 90](assets/math_foundations_deep_dive/formula-090.png)
 
 可以理解成：每层不是重写全部表示，而是在已有表示上写一个修改量。
 
@@ -2528,9 +2618,10 @@ x_next = x + F(x)
 
 LoRA 也有类似味道：
 
-```text
+<!-- formula-source: formula-091 sha256=0ad63bb1c2197032
 W' = W + ΔW
-```
+-->
+![math_foundations_deep_dive formula 91](assets/math_foundations_deep_dive/formula-091.png)
 
 adapter 不是从零训练整个模型，而是在已有权重上叠加领域修改。这就是为什么理解残差有助于理解参数高效微调：很多现代架构都倾向于“保留原能力 + 学增量”。
 
@@ -2582,9 +2673,10 @@ Attention 本身对顺序不敏感。如果不加位置信息：
 
 MiniGPT 常用：
 
-```text
+<!-- formula-source: formula-092 sha256=94f8ca634037593a
 x = token_embedding + position_embedding
-```
+-->
+![math_foundations_deep_dive formula 92](assets/math_foundations_deep_dive/formula-092.png)
 
 每个位置一个可学习向量。简单，但对超出训练长度的位置泛化有限。
 
@@ -2604,14 +2696,15 @@ QK^T -> content similarity + relative position
 
 它的数学核心可以写成：
 
-```text
+<!-- formula-source: formula-093 sha256=9579c7607db6fc18
 q_m' = R_m q
 k_n' = R_n k
 
 (q_m')^T k_n'
 = q^T R_m^T R_n k
 = q^T R_{n-m} k
-```
+-->
+![math_foundations_deep_dive formula 93](assets/math_foundations_deep_dive/formula-093.png)
 
 也就是说，attention score 里自然出现了相对位置差 `n - m`。RoPE 不是泛泛地“加位置标签”，而是把相对位置关系放进 Q/K 的匹配分数里。
 
@@ -2700,17 +2793,19 @@ RAG 把外部 chunk 拼进 prompt，本质上改变了上下文结构。位置�
 
 每次选最大概率：
 
-```text
+<!-- formula-source: formula-094 sha256=00e00be9dbe625ca
 token = argmax(probs)
-```
+-->
+![math_foundations_deep_dive formula 94](assets/math_foundations_deep_dive/formula-094.png)
 
 稳定，但可能死板。
 
 ### 10.2 Temperature
 
-```text
+<!-- formula-source: formula-095 sha256=47470fe9e6d98008
 probs = softmax(logits / τ)
-```
+-->
+![math_foundations_deep_dive formula 95](assets/math_foundations_deep_dive/formula-095.png)
 
 - `τ` 低：分布更尖，更保守。
 - `τ` 高：分布更平，更多样也更危险。
@@ -2718,7 +2813,7 @@ probs = softmax(logits / τ)
 
 看一个小例子：
 
-```text
+<!-- formula-source: formula-096 sha256=1432453f6b633f07
 logits = [4, 3, 1]
 
 τ = 1.0:
@@ -2729,7 +2824,8 @@ softmax([8,6,2]) ≈ [0.878, 0.119, 0.002]
 
 τ = 2.0:
 softmax([2,1.5,0.5]) ≈ [0.547, 0.331, 0.122]
-```
+-->
+![math_foundations_deep_dive formula 96](assets/math_foundations_deep_dive/formula-096.png)
 
 temperature 改的是候选概率形状，不会把错误证据变成正确证据。
 
@@ -2847,9 +2943,10 @@ by_prompt_type
 
 总体正确率：
 
-```text
+<!-- formula-source: formula-097 sha256=fe86b164cb439b51
 0.9 * 0.95 + 0.1 * 0.70 = 92.5%
-```
+-->
+![math_foundations_deep_dive formula 97](assets/math_foundations_deep_dive/formula-097.png)
 
 92.5% 看起来不错，但高风险症状 30% 错误可能完全不能发布。平均分把真正危险的部分稀释了。
 
@@ -2872,9 +2969,10 @@ by_prompt_type
 
 二分类准确率的标准误大致和下面有关：
 
-```text
+<!-- formula-source: formula-098 sha256=8e6ffaf9f2d63b14
 sqrt(p(1-p)/n)
-```
+-->
+![math_foundations_deep_dive formula 98](assets/math_foundations_deep_dive/formula-098.png)
 
 当 `n=20`，这个量很大；当 `n=500`，它会小很多。也就是说，20 条样本里对 18 条，并不等于你已经知道真实准确率接近 90%。换一批样本，可能明显变化。
 
@@ -2889,10 +2987,11 @@ sqrt(p(1-p)/n)
 
 这个公式适合建立直觉；正式 release gate 更推荐 Wilson interval 或 bootstrap，并同时报告点估计和置信区间。尤其是安全指标，不要被 `0 failure` 迷惑：
 
-```text
+<!-- formula-source: formula-099 sha256=c19bb7f0b79c6efc
 高风险样本 n=20，观察到 0 个 unsafe
 不等于真实 unsafe rate = 0
-```
+-->
+![math_foundations_deep_dive formula 99](assets/math_foundations_deep_dive/formula-099.png)
 
 例如高风险样本 `n=20`，观察到 `0` 个 unsafe。粗略 rule of three 会给出约 `3/n = 15%` 的 95% 上界直觉；Wilson upper bound 也仍然可能在十几个百分点量级。所以 `0/20` 只能说明“这 20 条没撞到失败”，不能说明 unsafe rate 接近 0。
 
@@ -3232,9 +3331,10 @@ embedding 不是法律词典，而是训练目标下的语义坐标。
 
 第三步，Transformer 用矩阵把表示不断变换：
 
-```text
+<!-- formula-source: formula-100 sha256=53a4d43e076bf7ef
 hidden -> Q/K/V -> attention -> FFN -> logits
-```
+-->
+![math_foundations_deep_dive formula 100](assets/math_foundations_deep_dive/formula-100.png)
 
 每层都在重组空间，让模型更容易表达风险判断。
 
@@ -3387,9 +3487,10 @@ RAG 召回到“普通感冒会发热”，也不能覆盖“高热伴抽搐”�
 
 最小数据：
 
-```text
+<!-- formula-source: formula-101 sha256=f18f8e5c7485431e
 logits = [1000, 1001, 1002]
-```
+-->
+![math_foundations_deep_dive formula 101](assets/math_foundations_deep_dive/formula-101.png)
 
 步骤：
 1. 实现 naive softmax：`exp(z) / sum(exp(z))`。
