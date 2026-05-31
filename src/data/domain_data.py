@@ -70,6 +70,93 @@ class DomainExample:
 
 
 @dataclass(frozen=True)
+class DataManifestEntry:
+    sample_id: str
+    source_id: str
+    source_group: str
+    parent_doc_id: str
+    content_hash: str
+    license: str
+    allowed_uses: list[str]
+    commercial_use_allowed: bool
+    redistribution_allowed: bool
+    version: str
+    effective_date: str
+    purpose: str
+    pii_status: str
+    review_status: str
+    access_scope: str = "local"
+    pii_types: list[str] | None = None
+    phi_types: list[str] | None = None
+    deidentification_method: str = ""
+    reidentification_risk: str = "unknown"
+    consent_status: str = "unknown"
+    retention_policy: str = ""
+    teacher_model_id: str = ""
+    teacher_prompt_version: str = ""
+    evidence_used: list[str] | None = None
+    support_label: str = "unknown"
+    unsafe_overclaim: bool = False
+
+    def __post_init__(self) -> None:
+        required = [
+            "sample_id",
+            "source_id",
+            "source_group",
+            "parent_doc_id",
+            "content_hash",
+            "license",
+            "version",
+            "purpose",
+            "pii_status",
+            "review_status",
+        ]
+        for field_name in required:
+            if not getattr(self, field_name):
+                raise ValueError(f"{field_name} must not be empty.")
+        valid_purposes = {"sft", "rag", "distill", "eval", "demo_only"}
+        if self.purpose not in valid_purposes:
+            raise ValueError(f"purpose must be one of {sorted(valid_purposes)}.")
+        valid_pii = {"none", "synthetic", "redacted", "unknown"}
+        if self.pii_status not in valid_pii:
+            raise ValueError(f"pii_status must be one of {sorted(valid_pii)}.")
+        valid_review = {"auto", "human_reviewed", "blocked"}
+        if self.review_status not in valid_review:
+            raise ValueError(f"review_status must be one of {sorted(valid_review)}.")
+        if self.license == "unknown" and self.purpose != "demo_only":
+            raise ValueError("license=unknown samples must be demo_only.")
+
+    @property
+    def publishable(self) -> bool:
+        return (
+            self.license != "unknown"
+            and self.pii_status != "unknown"
+            and self.review_status != "blocked"
+            and self.commercial_use_allowed
+            and self.redistribution_allowed
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class CleaningLogEntry:
+    sample_id: str
+    action: str
+    reason: str
+    rule_version: str
+    timestamp: str
+
+    def __post_init__(self) -> None:
+        if self.action not in {"keep", "drop", "modify"}:
+            raise ValueError("action must be keep, drop, or modify.")
+        for field_name in ["sample_id", "reason", "rule_version", "timestamp"]:
+            if not getattr(self, field_name):
+                raise ValueError(f"{field_name} must not be empty.")
+
+
+@dataclass(frozen=True)
 class RedactionResult:
     text: str
     hits: dict[str, int]

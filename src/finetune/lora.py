@@ -39,6 +39,19 @@ class QLoRAConfig:
     quant_type: str = "nf4"
     compute_dtype: str = "bfloat16"
     double_quant: bool = True
+    gradient_checkpointing: bool = True
+    max_seq_len: int = 1024
+    effective_batch_size: int = 32
+
+    def __post_init__(self) -> None:
+        if self.quant_type not in {"nf4", "fp4", "int8"}:
+            raise ValueError("quant_type must be nf4, fp4, or int8.")
+        if self.compute_dtype not in {"bfloat16", "float16", "float32"}:
+            raise ValueError("compute_dtype must be bfloat16, float16, or float32.")
+        if self.max_seq_len <= 0:
+            raise ValueError("max_seq_len must be positive.")
+        if self.effective_batch_size <= 0:
+            raise ValueError("effective_batch_size must be positive.")
 
 
 @dataclass(frozen=True)
@@ -105,6 +118,35 @@ def inject_lora_adapters(model: nn.Module, config: LoRAConfig) -> list[str]:
     return matched
 
 
+def discover_lora_target_modules(model: nn.Module, suffixes: tuple[str, ...]) -> list[str]:
+    if not suffixes:
+        raise ValueError("suffixes must not be empty.")
+    return [
+        name
+        for name, module in model.named_modules()
+        if isinstance(module, nn.Linear) and any(name.endswith(suffix) for suffix in suffixes)
+    ]
+
+
+def assert_lora_training_setup(model: nn.Module) -> None:
+    trainable_names = [
+        name
+        for name, parameter in model.named_parameters()
+        if parameter.requires_grad
+    ]
+    if not trainable_names:
+        raise ValueError("LoRA setup has no trainable parameters.")
+    if not any(".lora_A." in name or ".lora_B." in name for name in trainable_names):
+        raise ValueError("LoRA setup has no trainable adapter parameters.")
+    frozen_base_violations = [
+        name
+        for name, parameter in model.named_parameters()
+        if ".base." in name and parameter.requires_grad
+    ]
+    if frozen_base_violations:
+        raise ValueError(f"LoRA base parameters must be frozen: {frozen_base_violations}")
+
+
 def trainable_parameter_summary(model: nn.Module) -> TrainableParameterSummary:
     total = sum(parameter.numel() for parameter in model.parameters())
     trainable = sum(
@@ -164,7 +206,10 @@ def estimate_linear_parameter_count(in_features: int, out_features: int, bias: b
 def qlora_memory_note(config: QLoRAConfig) -> str:
     return (
         f"load_in_4bit={config.load_in_4bit}, quant_type={config.quant_type}, "
-        f"compute_dtype={config.compute_dtype}, double_quant={config.double_quant}"
+        f"compute_dtype={config.compute_dtype}, double_quant={config.double_quant}, "
+        f"gradient_checkpointing={config.gradient_checkpointing}, "
+        f"max_seq_len={config.max_seq_len}, "
+        f"effective_batch_size={config.effective_batch_size}"
     )
 
 

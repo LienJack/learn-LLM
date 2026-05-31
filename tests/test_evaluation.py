@@ -5,6 +5,7 @@ import pytest
 from src.evaluation.metrics import check_citations, check_json_output
 from src.evaluation.runner import (
     EvalExample,
+    check_leakage,
     compare_metric_reports,
     ensure_unique_eval_ids,
     run_eval,
@@ -44,6 +45,36 @@ def test_eval_example_schema_requires_risk_tags_and_unique_ids() -> None:
 
     with pytest.raises(ValueError, match="duplicate"):
         ensure_unique_eval_ids([make_example("same"), make_example("same")])
+
+
+def test_eval_example_accepts_answerability_contract() -> None:
+    example = make_example("medical_referral")
+    data = example.to_dict()
+    data["answerability"] = "needs_referral"
+    loaded = EvalExample.from_dict(data)
+
+    assert loaded.answerability == "needs_referral"
+
+    data["answerability"] = "bad"
+    with pytest.raises(ValueError, match="answerability"):
+        EvalExample.from_dict(data)
+
+
+def test_check_leakage_reports_exact_hash_and_source_group_overlap() -> None:
+    train_manifest = [
+        {"sample_id": "train_1", "content_hash": "hash_a", "source_group": "guide_a"},
+        {"sample_id": "train_2", "content_hash": "hash_b", "source_group": "guide_b"},
+    ]
+    eval_manifest = [
+        {"sample_id": "eval_hash", "content_hash": "hash_a", "source_group": "guide_c"},
+        {"sample_id": "eval_group", "content_hash": "hash_c", "source_group": "guide_b"},
+    ]
+
+    result = check_leakage(train_manifest, eval_manifest)
+
+    assert result.status == "fail"
+    assert result.exact_duplicate == ["eval_hash"]
+    assert result.source_group_overlap == ["eval_group"]
 
 
 def test_json_metric_accepts_valid_json_and_rejects_invalid_or_missing_fields() -> None:

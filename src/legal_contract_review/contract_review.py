@@ -17,6 +17,50 @@ SENSITIVE_PATTERNS = (
     re.compile(r"北京市|上海市|广州市|深圳市"),
 )
 LEGAL_BOUNDARY_TERMS = ("不替代律师", "不提供最终法律意见", "人工复核", "用途限制")
+FORBIDDEN_LEGAL_CLAIMS = ("一定有效", "一定无效", "肯定违法", "不用履行", "必然胜诉")
+SUPPORT_LEVELS = {"full", "partial", "none", "contradicted"}
+REVIEW_TYPES = {"lawyer", "clinician", "privacy", "safety"}
+
+
+@dataclass(frozen=True)
+class LegalReviewInput:
+    clause_text: str
+    contract_type: str
+    party_role: str
+    jurisdiction: str
+    source_confidentiality: str
+    redaction_status: str
+
+    def __post_init__(self) -> None:
+        missing = [
+            name
+            for name, value in asdict(self).items()
+            if isinstance(value, str) and not value
+        ]
+        if missing:
+            raise ValueError(f"LegalReviewInput missing fields: {sorted(missing)}")
+
+
+@dataclass(frozen=True)
+class LegalEvidence:
+    source_id: str
+    source_type: str
+    jurisdiction: str
+    effective_date: str
+    authority_level: str
+    span_id: str
+    support_level: str
+
+    def __post_init__(self) -> None:
+        missing = [
+            name
+            for name, value in asdict(self).items()
+            if isinstance(value, str) and not value
+        ]
+        if missing:
+            raise ValueError(f"LegalEvidence missing fields: {sorted(missing)}")
+        if self.support_level not in SUPPORT_LEVELS:
+            raise ValueError(f"support_level must be one of {sorted(SUPPORT_LEVELS)}.")
 
 
 @dataclass(frozen=True)
@@ -60,6 +104,11 @@ class ContractReviewOutput:
     uncertainty: str
     needs_human_review: bool
     citations: list[str] = field(default_factory=list)
+    review_required: bool = True
+    review_type: str = "lawyer"
+    suggested_direction: str = ""
+    review_points: list[str] = field(default_factory=list)
+    lawyer_review_required: bool = True
 
     def __post_init__(self) -> None:
         validate_contract_review_output(self)
@@ -83,10 +132,17 @@ class ContractReviewOutput:
         return cls(
             risk_level=data["risk_level"],
             risk_points=risk_points,
-            suggested_revision=data["suggested_revision"],
+            suggested_revision=data.get("suggested_revision", ""),
             uncertainty=data["uncertainty"],
             needs_human_review=bool(data["needs_human_review"]),
             citations=list(data.get("citations", [])),
+            review_required=bool(data.get("review_required", data["needs_human_review"])),
+            review_type=data.get("review_type", "lawyer"),
+            suggested_direction=data.get("suggested_direction", ""),
+            review_points=list(data.get("review_points", [])),
+            lawyer_review_required=bool(
+                data.get("lawyer_review_required", data["needs_human_review"]),
+            ),
         )
 
 
@@ -147,20 +203,29 @@ def validate_contract_sft_example(example: ContractSFTExample) -> None:
 
 
 def validate_contract_review_output(output: ContractReviewOutput) -> None:
+    forbidden_hits = scan_forbidden_legal_claims(output.to_dict())
+    if forbidden_hits:
+        raise ValueError(f"legal output contains forbidden final claims: {forbidden_hits}")
     if output.risk_level not in RISK_LEVELS:
         raise ValueError(f"risk_level must be one of {sorted(RISK_LEVELS)}.")
+    if output.review_type not in REVIEW_TYPES:
+        raise ValueError(f"review_type must be one of {sorted(REVIEW_TYPES)}.")
+    if output.needs_human_review != output.review_required:
+        raise ValueError("needs_human_review must match review_required.")
+    if output.lawyer_review_required != output.review_required:
+        raise ValueError("lawyer_review_required must match review_required for legal output.")
     if output.risk_level == "unknown":
         if output.risk_points:
             raise ValueError("unknown risk output must not include risk points.")
-        if not output.needs_human_review:
+        if not output.review_required:
             raise ValueError("unknown risk output must require human review.")
     else:
         if not output.risk_points:
             raise ValueError("non-unknown risk output must include risk points.")
         if not output.citations:
             raise ValueError("non-unknown risk output must include citations.")
-    if not output.suggested_revision:
-        raise ValueError("suggested_revision must not be empty.")
+    if not (output.suggested_revision or output.suggested_direction):
+        raise ValueError("suggested_revision or suggested_direction must not be empty.")
     if not output.uncertainty:
         raise ValueError("uncertainty must not be empty.")
 
@@ -238,6 +303,26 @@ def validate_legal_model_card(model_card: ModelCard) -> None:
 
 def contains_sensitive_data(text: str) -> bool:
     return any(pattern.search(text) for pattern in SENSITIVE_PATTERNS)
+
+
+def scan_forbidden_legal_claims(payload: Any) -> list[str]:
+    hits: set[str] = set()
+    for text in _iter_strings(payload):
+        for term in FORBIDDEN_LEGAL_CLAIMS:
+            if term in text:
+                hits.add(term)
+    return sorted(hits)
+
+
+def _iter_strings(payload: Any):
+    if isinstance(payload, str):
+        yield payload
+    elif isinstance(payload, dict):
+        for value in payload.values():
+            yield from _iter_strings(value)
+    elif isinstance(payload, list | tuple):
+        for value in payload:
+            yield from _iter_strings(value)
 
 
 def _looks_like_broad_liability(clause: str) -> bool:

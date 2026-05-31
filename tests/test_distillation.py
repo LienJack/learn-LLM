@@ -1,9 +1,11 @@
 import pytest
 
 from src.distill.distillation import (
+    ClaimSupport,
     DistillationExample,
     assert_no_distillation_leakage,
     compare_base_teacher_student,
+    count_unique_rejected_examples,
     filter_distillation_dataset,
     filter_distillation_example,
     split_distillation_by_source_group,
@@ -18,7 +20,19 @@ def make_example(
     response: str = "[answer] 违约金条款需要结合合同上下文判断。[citation] contract_a:12",
     citations: list[str] | None = None,
     filter_status: str = "approved",
+    claims: list[ClaimSupport] | None = None,
 ) -> DistillationExample:
+    default_claims = [
+        ClaimSupport(
+            claim_id="claim_001",
+            claim_text="违约金条款需要结合合同上下文判断。",
+            span_id="contract_a:12",
+            support_label="full",
+            review_method="manual",
+            reviewer="domain_reviewer",
+            confidence=0.9,
+        ),
+    ]
     return DistillationExample(
         id=example_id,
         prompt="违约金条款是否可以直接执行？",
@@ -29,6 +43,10 @@ def make_example(
         filter_status=filter_status,
         citations=["contract_a:12"] if citations is None else citations,
         source_group=source_group,
+        claims=default_claims if claims is None else claims,
+        normalized_question_hash="q_hash",
+        source_span_hash="span_hash",
+        teacher_prompt_hash="prompt_hash",
         risk_tags=["legal"],
     )
 
@@ -55,7 +73,7 @@ def test_distillation_example_requires_teacher_metadata() -> None:
 
 
 def test_filter_rejects_missing_citation_empty_answer_and_format_error() -> None:
-    no_citation = make_example("no_cite", citations=[])
+    no_citation = make_example("no_cite", citations=[], claims=[])
     empty = make_example("empty", response="")
     bad_format = make_example("bad_format", response="答案里没有固定标记", citations=["doc:1"])
 
@@ -77,6 +95,13 @@ def test_filter_dataset_reports_pass_rate_and_reasons() -> None:
     assert {result.example_id for result in rejected} == {"no_cite", "not_approved"}
     assert reason_counts["missing_citation"] == 1
     assert reason_counts["not_approved"] == 1
+    assert count_unique_rejected_examples(rejected) == 2
+
+
+def test_filter_rejects_cited_answer_without_claim_support() -> None:
+    result = filter_distillation_example(make_example("no_claims", claims=[]))
+
+    assert "missing_claim_support" in result.reasons
 
 
 def test_split_by_source_group_prevents_train_val_test_leakage() -> None:

@@ -5,6 +5,8 @@ from src.finetune.lora import (
     LoRAConfig,
     LoRALinear,
     QLoRAConfig,
+    assert_lora_training_setup,
+    discover_lora_target_modules,
     estimate_linear_parameter_count,
     estimate_lora_parameter_count,
     inject_lora_adapters,
@@ -42,12 +44,15 @@ def test_lora_linear_freezes_base_and_preserves_shape() -> None:
 
 def test_inject_lora_adapters_matches_target_modules() -> None:
     model = TinyTargetModel()
+    assert discover_lora_target_modules(model, ("q_proj", "v_proj")) == ["q_proj", "v_proj"]
+
     matched = inject_lora_adapters(model, LoRAConfig(r=2, target_modules=("q_proj", "v_proj")))
 
     assert matched == ["q_proj", "v_proj"]
     assert isinstance(model.q_proj, LoRALinear)
     assert isinstance(model.v_proj, LoRALinear)
     assert isinstance(model.other, nn.Linear)
+    assert_lora_training_setup(model)
 
 
 def test_inject_lora_adapters_fails_for_missing_target() -> None:
@@ -133,4 +138,6 @@ def test_qlora_note_and_manifest(tmp_path) -> None:
     write_lora_manifest(path, config, summary)
 
     assert "load_in_4bit=True" in note
+    assert "gradient_checkpointing=True" in note
+    assert "effective_batch_size=32" in note
     assert "trainable_ratio" in path.read_text()

@@ -84,19 +84,24 @@ class MiniGPT(nn.Module):
         self,
         input_ids: Tensor,
         labels: Tensor | None = None,
+        attention_mask: Tensor | None = None,
     ) -> tuple[Tensor, Tensor | None]:
         if input_ids.ndim != 2:
             raise ValueError("input_ids must have shape (batch, time).")
+        if attention_mask is not None and attention_mask.shape != input_ids.shape:
+            raise ValueError("attention_mask must have shape (batch, time).")
 
         _batch_size, time_steps = input_ids.shape
         if time_steps > self.config.block_size:
-            raise ValueError("input sequence length exceeds block_size.")
+            raise ValueError(
+                f"Sequence length {time_steps} exceeds block_size {self.config.block_size}.",
+            )
 
         positions = torch.arange(time_steps, device=input_ids.device)
         hidden = self.token_embedding(input_ids) + self.position_embedding(positions)
         hidden = self.dropout(hidden)
         for block in self.blocks:
-            hidden = block(hidden)
+            hidden = block(hidden, attention_mask=attention_mask, causal=True)
         hidden = self.ln_f(hidden)
         logits = self.lm_head(hidden)
         loss = language_modeling_loss(logits, labels) if labels is not None else None
@@ -110,6 +115,7 @@ def generate(
     max_new_tokens: int,
     temperature: float = 1.0,
     top_k: int | None = None,
+    top_p: float | None = None,
     eos_token_id: int | None = None,
     generator: torch.Generator | None = None,
 ) -> Tensor:
@@ -129,6 +135,7 @@ def generate(
             logits[0, -1].detach().cpu(),
             temperature=temperature,
             top_k=top_k,
+            top_p=top_p,
             generator=generator,
         ).to(device)
         generated = torch.cat([generated, next_id.view(1)])

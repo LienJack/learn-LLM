@@ -32,7 +32,13 @@ class CausalSelfAttention(nn.Module):
         self.attn_dropout = nn.Dropout(dropout)
         self.resid_dropout = nn.Dropout(dropout)
 
-    def forward(self, x: Tensor, return_weights: bool = False) -> Tensor | MultiHeadAttentionOutput:
+    def forward(
+        self,
+        x: Tensor,
+        attention_mask: Tensor | None = None,
+        causal: bool = True,
+        return_weights: bool = False,
+    ) -> Tensor | MultiHeadAttentionOutput:
         if x.ndim != 3:
             raise ValueError("x must have shape (batch, time, hidden_dim).")
 
@@ -47,16 +53,39 @@ class CausalSelfAttention(nn.Module):
         v = self._split_heads(v)
 
         scores = q @ k.transpose(-2, -1) / self.head_dim**0.5
-        mask = causal_mask(time_steps, device=x.device)
-        scores = scores.masked_fill(
-            ~mask.view(1, 1, time_steps, time_steps),
-            torch.finfo(x.dtype).min,
-        )
+        allowed: Tensor | None = None
+        if causal:
+            mask = causal_mask(time_steps, device=x.device)
+            allowed = mask.view(1, 1, time_steps, time_steps)
+
+        query_mask: Tensor | None = None
+        if attention_mask is not None:
+            if attention_mask.shape != x.shape[:2]:
+                raise ValueError("attention_mask must have shape (batch, time).")
+            padding_mask = attention_mask.to(dtype=torch.bool, device=x.device)
+            key_mask = padding_mask[:, None, None, :]
+            query_mask = padding_mask[:, None, :, None]
+            allowed = key_mask if allowed is None else allowed & key_mask
+
+        if allowed is not None:
+            scores = scores.masked_fill(~allowed, torch.finfo(x.dtype).min)
         weights = torch.softmax(scores, dim=-1)
+        if allowed is not None:
+            weights = weights.masked_fill(~allowed, 0.0)
+            normalizer = weights.sum(dim=-1, keepdim=True).clamp_min(
+                torch.finfo(weights.dtype).eps,
+            )
+            weights = weights / normalizer
+        if query_mask is not None:
+            weights = weights.masked_fill(~query_mask, 0.0)
         weights = self.attn_dropout(weights)
         values = weights @ v
+        if query_mask is not None:
+            values = values.masked_fill(~query_mask, 0.0)
         values = self._merge_heads(values, batch_size, time_steps)
         values = self.resid_dropout(self.out_proj(values))
+        if query_mask is not None:
+            values = values.masked_fill(~query_mask.squeeze(1), 0.0)
 
         if return_weights:
             return MultiHeadAttentionOutput(values=values, weights=weights)
@@ -72,6 +101,9 @@ class CausalSelfAttention(nn.Module):
 
     def _merge_heads(self, x: Tensor, batch_size: int, time_steps: int) -> Tensor:
         return x.transpose(1, 2).contiguous().view(batch_size, time_steps, self.hidden_dim)
+
+
+MultiHeadSelfAttention = CausalSelfAttention
 
 
 class FeedForward(nn.Module):
@@ -105,7 +137,12 @@ class TransformerBlock(nn.Module):
         self.ln_2 = nn.LayerNorm(hidden_dim)
         self.ffn = FeedForward(hidden_dim, expansion_factor, dropout)
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = x + self.attn(self.ln_1(x))
+    def forward(
+        self,
+        x: Tensor,
+        attention_mask: Tensor | None = None,
+        causal: bool = True,
+    ) -> Tensor:
+        x = x + self.attn(self.ln_1(x), attention_mask=attention_mask, causal=causal)
         x = x + self.ffn(self.ln_2(x))
         return x

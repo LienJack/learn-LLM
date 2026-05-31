@@ -10,8 +10,37 @@ from src.finetune.sft import SFTExample
 
 APPROVED_STATUS = "approved"
 ALLOWED_FILTER_STATUSES = {"approved", "rejected", "needs_review"}
+ANSWERABILITY_VALUES = {"answerable", "insufficient_evidence", "partial", "red_flag"}
 FORMAT_MARKERS = ("[answer]", "[citation]")
 RISK_TERMS = ("ignore evidence", "unsupported claim", "medical dosage", "legal guarantee")
+SUPPORT_LABELS = {"full", "partial", "none", "contradicted"}
+
+
+@dataclass(frozen=True)
+class ClaimSupport:
+    claim_id: str
+    claim_text: str
+    span_id: str
+    support_label: str
+    review_method: str
+    reviewer: str
+    confidence: float
+
+    def __post_init__(self) -> None:
+        required = {
+            "claim_id": self.claim_id,
+            "claim_text": self.claim_text,
+            "span_id": self.span_id,
+            "review_method": self.review_method,
+            "reviewer": self.reviewer,
+        }
+        missing = [name for name, value in required.items() if not value]
+        if missing:
+            raise ValueError(f"ClaimSupport missing required fields: {missing}")
+        if self.support_label not in SUPPORT_LABELS:
+            raise ValueError(f"support_label must be one of {sorted(SUPPORT_LABELS)}.")
+        if not 0 <= self.confidence <= 1:
+            raise ValueError("confidence must be in [0, 1].")
 
 
 @dataclass(frozen=True)
@@ -25,6 +54,14 @@ class DistillationExample:
     filter_status: str
     citations: list[str]
     source_group: str
+    answerability: str = "answerable"
+    claims: list[ClaimSupport] = field(default_factory=list)
+    normalized_question_hash: str = ""
+    source_span_hash: str = ""
+    teacher_prompt_hash: str = ""
+    semantic_near_duplicate_score: float = 0.0
+    uncertainty: str = ""
+    needs_human_review: bool = False
     source: str = "teacher"
     risk_tags: list[str] = field(default_factory=list)
 
@@ -43,6 +80,10 @@ class DistillationExample:
             )
         if not self.source_group:
             raise ValueError("DistillationExample.source_group must not be empty.")
+        if self.answerability not in ANSWERABILITY_VALUES:
+            raise ValueError(f"answerability must be one of {sorted(ANSWERABILITY_VALUES)}.")
+        if not 0 <= self.semantic_near_duplicate_score <= 1:
+            raise ValueError("semantic_near_duplicate_score must be in [0, 1].")
 
     def to_record(self) -> dict[str, Any]:
         return asdict(self)
@@ -96,6 +137,12 @@ def filter_distillation_example(
         reasons.append("empty_or_too_short_answer")
     if not example.citations:
         reasons.append("missing_citation")
+    if example.answerability == "insufficient_evidence" and example.citations:
+        reasons.append("insufficient_evidence_should_not_cite")
+    if example.citations and not example.claims:
+        reasons.append("missing_claim_support")
+    if any(claim.support_label in {"none", "contradicted"} for claim in example.claims):
+        reasons.append("unsupported_claim")
     if any(marker not in lower_response for marker in required_markers):
         reasons.append("format_error")
     if any(term in lower_response for term in RISK_TERMS):
@@ -129,6 +176,10 @@ def filter_distillation_dataset(
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
 
     return approved, rejected, reason_counts
+
+
+def count_unique_rejected_examples(results: list[DistillationFilterResult]) -> int:
+    return len({result.example_id for result in results if result.reasons})
 
 
 def split_distillation_by_source_group(

@@ -1,6 +1,8 @@
 import pytest
 
 from src.data.domain_data import (
+    CleaningLogEntry,
+    DataManifestEntry,
     DomainExample,
     assert_no_domain_split_leakage,
     build_quality_report,
@@ -125,3 +127,64 @@ def test_quality_report_contains_required_sections(tmp_path) -> None:
     assert "phone" in report.redaction_hits
     assert "duplicate_count" in text
     assert "risk_tag_counts" in text
+
+
+def test_data_manifest_entry_enforces_license_and_publishable_flags() -> None:
+    entry = DataManifestEntry(
+        sample_id="s1",
+        source_id="doc1",
+        source_group="group1",
+        parent_doc_id="parent1",
+        content_hash="abc",
+        license="internal_review_only",
+        allowed_uses=["rag", "eval"],
+        commercial_use_allowed=False,
+        redistribution_allowed=False,
+        version="v1",
+        effective_date="2026-05-31",
+        purpose="rag",
+        pii_status="redacted",
+        review_status="human_reviewed",
+    )
+
+    assert entry.publishable is False
+    assert entry.to_dict()["source_group"] == "group1"
+
+    with pytest.raises(ValueError, match="demo_only"):
+        DataManifestEntry(
+            sample_id="bad",
+            source_id="doc",
+            source_group="group",
+            parent_doc_id="parent",
+            content_hash="hash",
+            license="unknown",
+            allowed_uses=["sft"],
+            commercial_use_allowed=False,
+            redistribution_allowed=False,
+            version="v1",
+            effective_date="2026-05-31",
+            purpose="sft",
+            pii_status="unknown",
+            review_status="auto",
+        )
+
+
+def test_cleaning_log_entry_validates_action() -> None:
+    entry = CleaningLogEntry(
+        sample_id="s1",
+        action="drop",
+        reason="license_unknown",
+        rule_version="clean_v1",
+        timestamp="2026-05-31T00:00:00Z",
+    )
+
+    assert entry.action == "drop"
+
+    with pytest.raises(ValueError, match="action"):
+        CleaningLogEntry(
+            sample_id="s1",
+            action="delete",
+            reason="duplicate",
+            rule_version="clean_v1",
+            timestamp="2026-05-31T00:00:00Z",
+        )

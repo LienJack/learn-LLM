@@ -27,6 +27,80 @@ class BigramLanguageModel(nn.Module):
         return logits, loss
 
 
+class CountBigramLM:
+    """A count-based bigram baseline with add-k smoothing."""
+
+    def __init__(self, vocab_size: int, smoothing: float = 1.0) -> None:
+        if vocab_size < 1:
+            raise ValueError("vocab_size must be positive.")
+        if smoothing < 0:
+            raise ValueError("smoothing must be non-negative.")
+        self.vocab_size = vocab_size
+        self.smoothing = smoothing
+        self.counts = torch.full((vocab_size, vocab_size), smoothing, dtype=torch.float32)
+
+    def fit(self, token_ids: Tensor) -> CountBigramLM:
+        if token_ids.ndim != 1:
+            raise ValueError("token_ids must be a 1D tensor.")
+        if token_ids.dtype != torch.long:
+            raise TypeError("token_ids must use dtype torch.long.")
+        if token_ids.numel() < 2:
+            raise ValueError("token_ids must contain at least two tokens.")
+        if token_ids.min().item() < 0 or token_ids.max().item() >= self.vocab_size:
+            raise ValueError("token_ids contain ids outside the vocabulary.")
+
+        self.counts = torch.full_like(self.counts, self.smoothing)
+        for current_id, next_id in zip(token_ids[:-1], token_ids[1:], strict=True):
+            self.counts[current_id.item(), next_id.item()] += 1.0
+        return self
+
+    def next_probs(self, prev_id: int) -> Tensor:
+        if prev_id < 0 or prev_id >= self.vocab_size:
+            raise ValueError("prev_id must be inside the vocabulary.")
+        row = self.counts[prev_id]
+        total = row.sum()
+        if total.item() == 0:
+            return torch.full((self.vocab_size,), 1.0 / self.vocab_size)
+        return row / total
+
+    def nll(self, token_ids: Tensor) -> Tensor:
+        if token_ids.ndim != 1:
+            raise ValueError("token_ids must be a 1D tensor.")
+        if token_ids.dtype != torch.long:
+            raise TypeError("token_ids must use dtype torch.long.")
+        if token_ids.numel() < 2:
+            raise ValueError("token_ids must contain at least two tokens.")
+
+        losses = []
+        for current_id, next_id in zip(token_ids[:-1], token_ids[1:], strict=True):
+            probability = self.next_probs(current_id.item())[next_id.item()].clamp_min(1e-12)
+            losses.append(-probability.log())
+        return torch.stack(losses).mean()
+
+    def generate(
+        self,
+        start_id: int,
+        max_new_tokens: int,
+        eos_token_id: int | None = None,
+        generator: torch.Generator | None = None,
+    ) -> Tensor:
+        if max_new_tokens < 0:
+            raise ValueError("max_new_tokens must be non-negative.")
+        generated = [start_id]
+        current_id = start_id
+        for _ in range(max_new_tokens):
+            next_id = torch.multinomial(
+                self.next_probs(current_id),
+                num_samples=1,
+                generator=generator,
+            ).item()
+            generated.append(next_id)
+            current_id = next_id
+            if eos_token_id is not None and next_id == eos_token_id:
+                break
+        return torch.tensor(generated, dtype=torch.long)
+
+
 @dataclass(frozen=True)
 class LanguageModelingConfig:
     seed: int = 0
@@ -95,6 +169,7 @@ def language_modeling_loss(logits: Tensor, labels: Tensor) -> Tensor:
     return F.cross_entropy(
         logits.reshape(batch_size * time_steps, vocab_size),
         labels.reshape(batch_size * time_steps),
+        ignore_index=-100,
     )
 
 
@@ -107,12 +182,15 @@ def sample_next_token(
 ) -> Tensor:
     if logits.ndim != 1:
         raise ValueError("logits must be a 1D tensor for one position.")
-    if temperature <= 0:
-        raise ValueError("temperature must be positive.")
+    if temperature < 0:
+        raise ValueError("temperature must be non-negative.")
     if top_k is not None and top_k < 1:
         raise ValueError("top_k must be positive when provided.")
     if top_p is not None and not 0 < top_p <= 1:
         raise ValueError("top_p must be in (0, 1] when provided.")
+
+    if temperature == 0:
+        return logits.argmax(dim=-1)
 
     scaled_logits = logits / temperature
     if top_k is not None:

@@ -31,6 +31,9 @@ class EvalExample:
     required_json_fields: list[str] = field(default_factory=list)
     expected_refusal: bool = False
     source_group: str = "default"
+    answerability: str = "answerable"
+    source_id: str = ""
+    content_hash: str = ""
 
     def __post_init__(self) -> None:
         if not self.id:
@@ -43,6 +46,8 @@ class EvalExample:
             raise ValueError("EvalExample.risk_tags must not be empty.")
         if not self.rubric:
             raise ValueError("EvalExample.rubric must not be empty.")
+        if self.answerability not in {"answerable", "unanswerable", "needs_referral"}:
+            raise ValueError("answerability must be answerable, unanswerable, or needs_referral.")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> EvalExample:
@@ -61,6 +66,9 @@ class EvalExample:
             required_json_fields=list(data.get("required_json_fields", [])),
             expected_refusal=bool(data.get("expected_refusal", False)),
             source_group=data.get("source_group", "default"),
+            answerability=data.get("answerability", "answerable"),
+            source_id=data.get("source_id", ""),
+            content_hash=data.get("content_hash", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -102,6 +110,21 @@ class RegressionDelta:
     delta: float
 
 
+@dataclass(frozen=True)
+class LeakageCheckResult:
+    exact_duplicate: list[str]
+    source_group_overlap: list[str]
+    near_duplicate: list[str] = field(default_factory=list)
+
+    @property
+    def status(self) -> str:
+        return (
+            "fail"
+            if self.exact_duplicate or self.source_group_overlap or self.near_duplicate
+            else "pass"
+        )
+
+
 def ensure_unique_eval_ids(examples: list[EvalExample]) -> None:
     seen: set[str] = set()
     duplicates: set[str] = set()
@@ -111,6 +134,43 @@ def ensure_unique_eval_ids(examples: list[EvalExample]) -> None:
         seen.add(example.id)
     if duplicates:
         raise ValueError(f"duplicate eval ids: {sorted(duplicates)}")
+
+
+def check_leakage(
+    train_manifest: list[dict[str, Any]],
+    eval_manifest: list[dict[str, Any]],
+) -> LeakageCheckResult:
+    train_hashes = {
+        row["content_hash"] for row in train_manifest if row.get("content_hash")
+    }
+    eval_hash_to_id = {
+        row.get("content_hash"): row.get("sample_id", row.get("id", ""))
+        for row in eval_manifest
+        if row.get("content_hash")
+    }
+    train_groups = {
+        row["source_group"] for row in train_manifest if row.get("source_group")
+    }
+    eval_group_to_id = {
+        row.get("source_group"): row.get("sample_id", row.get("id", ""))
+        for row in eval_manifest
+        if row.get("source_group")
+    }
+
+    duplicate_ids = sorted(
+        eval_id
+        for content_hash, eval_id in eval_hash_to_id.items()
+        if content_hash in train_hashes
+    )
+    overlap_ids = sorted(
+        eval_id
+        for source_group, eval_id in eval_group_to_id.items()
+        if source_group in train_groups
+    )
+    return LeakageCheckResult(
+        exact_duplicate=duplicate_ids,
+        source_group_overlap=overlap_ids,
+    )
 
 
 def run_eval(
