@@ -22,8 +22,21 @@ RED_FLAG_RULES = {
     "chest_pain": ("胸痛", "胸口痛", "胸闷"),
     "shortness_of_breath": ("呼吸困难", "喘不上气", "气短"),
     "consciousness_change": ("意识异常", "昏迷", "晕厥"),
+    "severe_allergy": ("严重过敏", "喉头水肿", "全身皮疹", "过敏性休克"),
     "self_harm": ("自伤", "轻生", "不想活"),
 }
+RECOMMENDED_ACTIONS = {
+    "call_emergency_services",
+    "go_to_er",
+    "seek_urgent_care",
+    "schedule_routine_visit",
+    "general_info",
+}
+PHI_PATTERNS = (
+    re.compile(r"1[3-9]\d{9}"),
+    re.compile(r"\d{17}[\dXx]"),
+    re.compile(r"[\w.-]+@[\w.-]+"),
+)
 
 
 @dataclass(frozen=True)
@@ -35,8 +48,12 @@ class MedicalQAOutput:
     self_care_general: list[str]
     uncertainty: str
     not_medical_advice: bool
+    recommended_action: str = "general_info"
     citations: list[str] = field(default_factory=list)
     refused: bool = False
+    review_required: bool = False
+    review_type: str = "clinician"
+    medication_boundary: dict[str, bool] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         validate_medical_output(self)
@@ -57,8 +74,12 @@ class MedicalQAOutput:
             self_care_general=list(data.get("self_care_general", [])),
             uncertainty=data["uncertainty"],
             not_medical_advice=bool(data["not_medical_advice"]),
+            recommended_action=data.get("recommended_action", "general_info"),
             citations=list(data.get("citations", [])),
             refused=bool(data.get("refused", False)),
+            review_required=bool(data.get("review_required", False)),
+            review_type=data.get("review_type", "clinician"),
+            medication_boundary=dict(data.get("medication_boundary", {})),
         )
 
 
@@ -120,8 +141,15 @@ def review_medical_question(
             self_care_general=[],
             uncertainty="无法通过当前信息判断具体病因或用药方案。",
             not_medical_advice=True,
+            recommended_action="seek_urgent_care" if red_flags else "schedule_routine_visit",
             citations=[],
             refused=True,
+            review_required=True,
+            medication_boundary={
+                "dosage_requested": True,
+                "dosage_provided": False,
+                "clinician_review_required": True,
+            },
         )
 
     results = store.search(question, top_k=top_k, min_score=0.0)
@@ -135,8 +163,10 @@ def review_medical_question(
             self_care_general=[],
             uncertainty="当前资料不足，不能诊断。",
             not_medical_advice=True,
+            recommended_action="go_to_er" if red_flags else "general_info",
             citations=[],
             refused=True,
+            review_required=bool(red_flags),
         )
 
     citation_id = useful_results[0].chunk.chunk_id
@@ -146,14 +176,16 @@ def review_medical_question(
 
     return MedicalQAOutput(
         plain_explanation="根据资料，相关症状需要谨慎对待，并结合持续时间、严重程度和伴随表现判断。",
-        possible_causes=["疲劳、感染、压力等都可能相关，但不能据此诊断。"],
+        possible_causes=[] if red_flags else ["疲劳、感染、压力等都可能相关，但不能据此诊断。"],
         when_to_seek_care=seek_care,
         red_flags=red_flags,
         self_care_general=["记录症状出现时间、诱因和伴随表现，便于就医沟通。"],
         uncertainty="无法根据当前信息诊断，不能替代医生面对面评估。",
         not_medical_advice=True,
+        recommended_action="go_to_er" if red_flags else "general_info",
         citations=[citation_id],
         refused=False,
+        review_required=bool(red_flags),
     )
 
 
@@ -164,8 +196,18 @@ def validate_medical_output(output: MedicalQAOutput) -> None:
         raise ValueError("uncertainty must not be empty.")
     if not output.not_medical_advice:
         raise ValueError("medical output must set not_medical_advice=True.")
+    if output.recommended_action not in RECOMMENDED_ACTIONS:
+        raise ValueError(f"recommended_action must be one of {sorted(RECOMMENDED_ACTIONS)}.")
     if output.red_flags and not output.when_to_seek_care:
         raise ValueError("red flag output must include when_to_seek_care.")
+    if output.red_flags and output.possible_causes:
+        raise ValueError("red flag output must not list low-risk possible causes.")
+    if output.red_flags and output.recommended_action not in {
+        "call_emergency_services",
+        "go_to_er",
+        "seek_urgent_care",
+    }:
+        raise ValueError("red flag output must recommend urgent care.")
     if not output.refused and not output.citations:
         raise ValueError("non-refusal medical output must include citations.")
     if contains_unsafe_medication_advice(output.plain_explanation):
@@ -206,7 +248,7 @@ def validate_medical_model_card(model_card: ModelCard) -> None:
 def detect_red_flags(text: str) -> list[str]:
     flags: list[str] = []
     for flag, terms in RED_FLAG_RULES.items():
-        if any(term in text for term in terms):
+        if any(_term_is_asserted(text, term) for term in terms):
             flags.append(flag)
     return flags
 
@@ -217,3 +259,22 @@ def contains_medication_dosage_request(text: str) -> bool:
 
 def contains_unsafe_medication_advice(text: str) -> bool:
     return any(pattern.search(text) for pattern in UNSAFE_MEDICATION_ADVICE_PATTERNS)
+
+
+def redact_phi(text: str) -> str:
+    redacted = text
+    for pattern in PHI_PATTERNS:
+        redacted = pattern.sub("PHI_REDACTED", redacted)
+    return redacted
+
+
+def contains_phi(text: str) -> bool:
+    return any(pattern.search(text) for pattern in PHI_PATTERNS)
+
+
+def _term_is_asserted(text: str, term: str) -> bool:
+    index = text.find(term)
+    if index < 0:
+        return False
+    window = text[max(0, index - 4) : index]
+    return not any(marker in window for marker in ("没有", "无", "否认", "不伴"))

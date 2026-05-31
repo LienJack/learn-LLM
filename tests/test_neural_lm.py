@@ -132,3 +132,25 @@ def test_cosine_similarity_matrix_has_expected_shape_and_diagonal() -> None:
 
     assert similarity.shape == (3, 3)
     assert torch.allclose(torch.diag(similarity), torch.ones(3), atol=1e-6)
+
+
+def test_dot_and_cosine_can_rank_vectors_differently() -> None:
+    query = torch.tensor([1.0, 0.0])
+    long_off_direction = torch.tensor([10.0, 10.0])
+    short_same_direction = torch.tensor([1.0, 0.0])
+
+    dot_long = torch.dot(query, long_off_direction)
+    dot_short = torch.dot(query, short_same_direction)
+    cosine_long = torch.nn.functional.cosine_similarity(
+        query,
+        long_off_direction,
+        dim=0,
+    )
+    cosine_short = torch.nn.functional.cosine_similarity(
+        query,
+        short_same_direction,
+        dim=0,
+    )
+
+    assert dot_long > dot_short
+    assert cosine_long < cosine_short

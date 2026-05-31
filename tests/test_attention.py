@@ -123,6 +123,31 @@ def test_padding_mask_removes_key_positions() -> None:
     assert torch.allclose(output.weights[:, :, 2:], torch.zeros(1, 4, 2))
 
 
+def test_padding_query_outputs_are_zero() -> None:
+    q = torch.randn(1, 4, 3)
+    k = torch.randn(1, 4, 3)
+    v = torch.randn(1, 4, 3)
+    attention_mask = torch.tensor([[1, 1, 0, 0]], dtype=torch.long)
+
+    output = scaled_dot_product_attention(q, k, v, causal=False, attention_mask=attention_mask)
+
+    assert torch.allclose(output.weights[:, 2:, :], torch.zeros(1, 2, 4))
+    assert torch.allclose(output.values[:, 2:, :], torch.zeros(1, 2, 3))
+
+
+def test_attention_weight_sums_only_require_valid_queries() -> None:
+    q = torch.randn(1, 4, 3)
+    k = torch.randn(1, 4, 3)
+    v = torch.randn(1, 4, 3)
+    attention_mask = torch.tensor([[1, 1, 0, 0]], dtype=torch.long)
+
+    output = scaled_dot_product_attention(q, k, v, causal=False, attention_mask=attention_mask)
+
+    valid_rows = attention_mask.bool()
+    assert torch.allclose(output.weights.sum(dim=-1)[valid_rows], torch.ones(2))
+    assert torch.allclose(output.weights.sum(dim=-1)[~valid_rows], torch.zeros(2))
+
+
 def test_single_head_self_attention_projects_inputs() -> None:
     module = SingleHeadSelfAttention(input_dim=6, head_dim=4)
     x = torch.randn(2, 5, 6)

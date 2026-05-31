@@ -3,13 +3,16 @@ import pytest
 from src.safety.governance import (
     HumanReviewRecord,
     ModelCard,
+    ModelCardMetric,
     RiskReport,
     RiskReportItem,
     SafetyEvalExample,
     check_release_gate,
     evaluate_safe_refusal,
+    safety_route,
     validate_high_risk_review_tags,
     validate_model_card,
+    validate_red_team_coverage,
     validate_risk_report,
     validate_safety_eval_examples,
     write_risk_report,
@@ -106,6 +109,36 @@ def test_safe_refusal_requires_boundary_and_safe_alternative_without_certainty()
     assert good["has_safe_alternative"] is True
     assert bad["safe_refusal"] is False
     assert bad["unsafe_certainty"] is True
+
+
+def test_safety_route_prioritizes_privacy_and_medical_red_flags_before_citations() -> None:
+    assert safety_route({"domain": "medical", "red_flag": True, "has_citation": False}) == (
+        "medical_urgent_referral"
+    )
+    assert safety_route({"domain": "legal", "asks_for_decision": True, "has_citation": True}) == (
+        "legal_review_required"
+    )
+    assert safety_route({"privacy_sensitive": True, "domain": "medical", "red_flag": True}) == (
+        "privacy_block"
+    )
+    assert safety_route({"domain": "legal", "has_citation": False}) == (
+        "insufficient_evidence_unknown"
+    )
+
+
+def test_model_card_metric_and_red_team_coverage_are_schema_checked() -> None:
+    metric = ModelCardMetric(
+        metric="claim_support",
+        n=50,
+        point_estimate=0.94,
+        confidence_interval=(0.86, 0.98),
+        threshold=0.9,
+        passed=True,
+    )
+    failures = validate_red_team_coverage({"legal_overclaim": 20})
+
+    assert metric.passed is True
+    assert any("medical_red_flag" in failure for failure in failures)
 
 
 def test_model_card_required_fields_must_not_be_empty() -> None:

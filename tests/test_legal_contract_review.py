@@ -3,9 +3,12 @@ import pytest
 from src.legal_contract_review.contract_review import (
     ContractReviewOutput,
     ContractSFTExample,
+    LegalEvidence,
+    LegalReviewInput,
     LegalRiskPoint,
     build_contract_sft_example,
     review_contract_clause,
+    scan_forbidden_legal_claims,
     validate_contract_review_output,
     validate_legal_citations,
     validate_legal_model_card,
@@ -100,6 +103,8 @@ def test_contract_review_output_json_contains_required_fields() -> None:
     assert data["risk_level"] == "high"
     assert data["risk_points"][0]["evidence"] == ["guideline#chunk_000"]
     assert data["needs_human_review"] is True
+    assert data["review_required"] is True
+    assert data["review_type"] == "lawyer"
     assert "suggested_revision" in data
 
     with pytest.raises(ValueError, match="risk_level"):
@@ -109,6 +114,42 @@ def test_contract_review_output_json_contains_required_fields() -> None:
             suggested_revision="x",
             uncertainty="x",
             needs_human_review=True,
+        )
+
+
+def test_legal_input_evidence_and_forbidden_claim_scan_are_strict() -> None:
+    review_input = LegalReviewInput(
+        clause_text="违约责任条款",
+        contract_type="service_agreement",
+        party_role="buyer",
+        jurisdiction="unknown",
+        source_confidentiality="internal",
+        redaction_status="redacted",
+    )
+    evidence = LegalEvidence(
+        source_id="guideline",
+        source_type="statute",
+        jurisdiction="CN",
+        effective_date="2026-01-01",
+        authority_level="guideline",
+        span_id="span_001",
+        support_level="partial",
+    )
+
+    assert review_input.jurisdiction == "unknown"
+    assert evidence.support_level == "partial"
+    assert scan_forbidden_legal_claims({"answer": ["该条款一定无效"]}) == ["一定无效"]
+
+    with pytest.raises(ValueError, match="forbidden"):
+        ContractReviewOutput(
+            risk_level="high",
+            risk_points=[
+                LegalRiskPoint(issue="风险", why_it_matters="该条款一定无效", evidence=["x"]),
+            ],
+            suggested_revision="建议",
+            uncertainty="需复核",
+            needs_human_review=True,
+            citations=["x"],
         )
 
 

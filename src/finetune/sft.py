@@ -12,6 +12,22 @@ from src.data.text_datasets import IGNORE_INDEX, ChatMessage, SFTFeatures, build
 from src.finetune.hf_workflow import format_messages_fallback
 from src.tokenizer.simple_tokenizer import CharacterTokenizer
 
+ANSWERABILITY_VALUES = {"answerable", "unanswerable", "partial", "red_flag"}
+SUPPORT_LEVELS = {"full", "partial", "none", "contradicted"}
+
+
+@dataclass(frozen=True)
+class EvidenceReference:
+    source_id: str
+    span_id: str
+    support_level: str
+
+    def __post_init__(self) -> None:
+        if not self.source_id or not self.span_id:
+            raise ValueError("EvidenceReference source_id and span_id must not be empty.")
+        if self.support_level not in SUPPORT_LEVELS:
+            raise ValueError(f"support_level must be one of {sorted(SUPPORT_LEVELS)}.")
+
 
 @dataclass(frozen=True)
 class SFTExample:
@@ -19,6 +35,10 @@ class SFTExample:
     messages: list[ChatMessage]
     source: str
     source_group: str
+    task_type: str = "general"
+    answerability: str = "answerable"
+    template_version: str = "template_v1"
+    evidence_ids: list[EvidenceReference] = field(default_factory=list)
     risk_tags: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -32,6 +52,12 @@ class SFTExample:
             raise ValueError("SFTExample.source must not be empty.")
         if not self.source_group:
             raise ValueError("SFTExample.source_group must not be empty.")
+        if not self.task_type:
+            raise ValueError("SFTExample.task_type must not be empty.")
+        if self.answerability not in ANSWERABILITY_VALUES:
+            raise ValueError(f"answerability must be one of {sorted(ANSWERABILITY_VALUES)}.")
+        if not self.template_version:
+            raise ValueError("SFTExample.template_version must not be empty.")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> SFTExample:
@@ -43,17 +69,30 @@ class SFTExample:
             ChatMessage(role=message["role"], content=message["content"])
             for message in data["messages"]
         ]
+        evidence_ids = [
+            EvidenceReference(
+                source_id=item["source_id"],
+                span_id=item["span_id"],
+                support_level=item["support_level"],
+            )
+            for item in data.get("evidence_ids", [])
+        ]
         return cls(
             id=data["id"],
             messages=messages,
             source=data["source"],
             source_group=data["source_group"],
+            task_type=data.get("task_type", "general"),
+            answerability=data.get("answerability", "answerable"),
+            template_version=data.get("template_version", "template_v1"),
+            evidence_ids=evidence_ids,
             risk_tags=list(data.get("risk_tags", [])),
         )
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["messages"] = [asdict(message) for message in self.messages]
+        data["sample_id"] = self.id
         return data
 
 
@@ -71,6 +110,14 @@ class BehaviorComparison:
     before: str
     after: str
     changed: bool
+
+
+@dataclass(frozen=True)
+class LabelDebugRow:
+    token: str
+    role: str
+    label: int
+    contributes_to_loss: bool
 
 
 def load_sft_jsonl(path: str | Path) -> list[SFTExample]:
@@ -143,6 +190,34 @@ def supervised_label_text(
     return tokenizer.decode(supervised)
 
 
+def debug_labels(
+    example: SFTExample,
+    tokenizer: CharacterTokenizer,
+    max_length: int,
+) -> list[LabelDebugRow]:
+    """Returns token-level roles and label visibility for assistant-only loss checks."""
+
+    features = build_sft_batch_item(example, tokenizer, max_length)
+    roles = _token_roles(example, tokenizer, max_length)
+    rows: list[LabelDebugRow] = []
+    for token_id, role, label in zip(
+        features.input_ids.tolist(),
+        roles,
+        features.labels.tolist(),
+        strict=True,
+    ):
+        token = tokenizer.decode([token_id], skip_special_tokens=False)
+        rows.append(
+            LabelDebugRow(
+                token=token,
+                role=role,
+                label=label,
+                contributes_to_loss=label != IGNORE_INDEX,
+            ),
+        )
+    return rows
+
+
 def split_by_source_group(
     examples: list[SFTExample],
     val_ratio: float,
@@ -207,3 +282,22 @@ def write_behavior_report(path: str | Path, comparisons: list[BehaviorComparison
             ],
         )
     Path(path).write_text("\n".join(lines))
+
+
+def _token_roles(
+    example: SFTExample,
+    tokenizer: CharacterTokenizer,
+    max_length: int,
+) -> list[str]:
+    roles: list[str] = ["special"]
+    for message in example.messages:
+        prefix_ids = tokenizer.encode(f"<|{message.role}|>\n", add_special_tokens=False)
+        content_ids = tokenizer.encode(message.content, add_special_tokens=False)
+        newline_ids = tokenizer.encode("\n", add_special_tokens=False)
+        roles.extend(["template"] * len(prefix_ids))
+        roles.extend([message.role] * len(content_ids))
+        roles.extend(["template"] * len(newline_ids))
+    roles.append("assistant" if example.messages[-1].role == "assistant" else "special")
+    roles = roles[:max_length]
+    roles.extend(["padding"] * (max_length - len(roles)))
+    return roles

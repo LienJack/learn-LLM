@@ -1,7 +1,7 @@
 from src.serving.runtime import (
     BenchmarkResult,
-    DeploymentManifest,
     DeploymentConfig,
+    DeploymentManifest,
     GeneratedOutput,
     GenerationConfig,
     LocalServingEngine,

@@ -3,8 +3,9 @@ import pytest
 from src.data.text_datasets import ChatMessage
 from src.serving.runtime import (
     BenchmarkResult,
-    DeploymentManifest,
+    CanaryConfig,
     DeploymentConfig,
+    DeploymentManifest,
     GeneratedOutput,
     GenerationConfig,
     LocalServingEngine,
@@ -13,9 +14,11 @@ from src.serving.runtime import (
     ReleaseGateConfig,
     RollbackConfig,
     ServingRequest,
-    build_safe_log_record,
     benchmark_requests,
+    build_safe_log_record,
     compare_quantization_runs,
+    estimate_vram_mb,
+    paired_metric_delta,
     run_release_gate,
     validate_deployment_config,
     write_quantization_report,
@@ -136,6 +139,7 @@ def test_quantization_runs_must_share_eval_set_and_write_report(tmp_path) -> Non
         benchmark=BenchmarkResult(2, 0, 20, 30, 40),
         eval_metrics={"json_valid": 1.0, "safe_refusal": 0.95},
         eval_set_id="legal_eval_v1",
+        baseline_run_id="baseline",
     )
     int8 = QuantizationRun(
         version="legal-int8",
@@ -144,6 +148,7 @@ def test_quantization_runs_must_share_eval_set_and_write_report(tmp_path) -> Non
         benchmark=BenchmarkResult(2, 0, 15, 25, 55),
         eval_metrics={"json_valid": 1.0, "safe_refusal": 0.95},
         eval_set_id="legal_eval_v1",
+        baseline_run_id="legal-fp16",
     )
 
     rows = compare_quantization_runs([fp16, int8])
@@ -153,6 +158,15 @@ def test_quantization_runs_must_share_eval_set_and_write_report(tmp_path) -> Non
     assert rows[0]["eval_json_valid"] == 1.0
     assert "legal_eval_v1" in path.read_text()
     assert "legal-int8" in path.read_text()
+    delta, passed = paired_metric_delta(
+        fp16,
+        int8,
+        "safe_refusal",
+        higher_is_better=True,
+        tolerance=0.01,
+    )
+    assert delta == pytest.approx(0.0)
+    assert passed is True
 
     with pytest.raises(ValueError, match="same eval set"):
         compare_quantization_runs(
@@ -227,8 +241,11 @@ def test_release_gate_passes_with_required_reports_and_metrics() -> None:
         manifest=make_manifest(),
         eval_metrics={
             "json_valid_rate": 0.99,
+            "schema_pass_rate": 0.99,
             "citation_support_rate": 0.95,
+            "legal_boundary_pass_rate": 0.98,
             "high_risk_unsafe_answer_rate": 0.0,
+            "prompt_injection_followed_rate": 0.0,
         },
         benchmark=BenchmarkResult(10, 0, 100, 250, 50),
         required_files={
@@ -251,8 +268,11 @@ def test_release_gate_blocks_missing_reports_rollback_and_safety_regression() ->
         manifest=make_manifest(),
         eval_metrics={
             "json_valid_rate": 0.99,
+            "schema_pass_rate": 0.9,
             "citation_support_rate": 0.95,
+            "legal_boundary_pass_rate": 0.8,
             "high_risk_unsafe_answer_rate": 0.2,
+            "prompt_injection_followed_rate": 0.1,
         },
         benchmark=BenchmarkResult(10, 1, 100, 2_500, 50),
         required_files={
@@ -269,9 +289,38 @@ def test_release_gate_blocks_missing_reports_rollback_and_safety_regression() ->
     assert result.passed is False
     assert "missing required file: eval_report" in result.failed_reasons
     assert "missing required file: rollback_target" in result.failed_reasons
+    assert "schema_pass_rate below threshold" in result.failed_reasons
+    assert "legal_boundary_pass_rate below threshold" in result.failed_reasons
     assert "high_risk_unsafe_answer_rate above threshold" in result.failed_reasons
+    assert "prompt_injection_followed_rate above threshold" in result.failed_reasons
     assert "p95_latency_ms above threshold" in result.failed_reasons
     assert "error_rate above threshold" in result.failed_reasons
+
+
+def test_vram_estimate_and_canary_config_capture_release_controls() -> None:
+    estimate = estimate_vram_mb(
+        weight_memory_mb=4000,
+        layers=2,
+        batch_size=1,
+        kv_heads=2,
+        sequence_length=128,
+        head_dim=64,
+        bytes_per_kv=2,
+        activation_workspace_mb=512,
+        framework_overhead_mb=256,
+    )
+    canary = CanaryConfig(
+        owner="serving-owner",
+        traffic_scope="1% internal",
+        stop_conditions=["privacy leak once", "schema_fail_rate > 0.02"],
+        alert_channels=["#alerts"],
+        rollback_command="deploy rollback legal-sft-v1-fp16",
+        post_rollback_smoke_test="pytest tests/test_serving_runtime.py",
+        incident_log_path="reports/incidents.md",
+    )
+
+    assert estimate > 4000
+    assert canary.rollback_command.startswith("deploy rollback")
 
 
 def test_safe_log_record_does_not_store_raw_sensitive_input() -> None:

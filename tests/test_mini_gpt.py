@@ -25,6 +25,36 @@ def test_mini_gpt_forward_returns_logits_and_loss() -> None:
     assert loss.ndim == 0
 
 
+def test_mini_gpt_loss_ignores_masked_labels() -> None:
+    config = MiniGPTConfig(vocab_size=12, block_size=6, hidden_dim=12, num_layers=1, num_heads=3)
+    model = MiniGPT(config)
+    input_ids = torch.randint(0, 12, (2, 6))
+    labels = torch.randint(0, 12, (2, 6))
+    labels[:, -2:] = -100
+
+    logits, loss = model(input_ids, labels)
+    expected = torch.nn.functional.cross_entropy(
+        logits.reshape(-1, 12),
+        labels.reshape(-1),
+        ignore_index=-100,
+    )
+
+    assert loss is not None
+    assert torch.allclose(loss, expected)
+
+
+def test_mini_gpt_forward_accepts_attention_mask() -> None:
+    config = MiniGPTConfig(vocab_size=12, block_size=6, hidden_dim=12, num_layers=1, num_heads=3)
+    model = MiniGPT(config)
+    input_ids = torch.randint(0, 12, (2, 6))
+    attention_mask = torch.tensor([[1, 1, 1, 1, 0, 0], [1, 1, 1, 0, 0, 0]])
+
+    logits, loss = model(input_ids, attention_mask=attention_mask)
+
+    assert logits.shape == (2, 6, 12)
+    assert loss is None
+
+
 def test_mini_gpt_rejects_sequences_longer_than_block_size() -> None:
     model = MiniGPT(MiniGPTConfig(vocab_size=12, block_size=4, hidden_dim=12, num_heads=3))
     input_ids = torch.randint(0, 12, (2, 5))
@@ -88,6 +118,38 @@ def test_generate_crops_context_and_respects_max_new_tokens() -> None:
     assert output.shape == (9,)
     assert torch.equal(output[:6], prompt)
     assert output.max().item() < 8
+
+
+def test_generate_temperature_zero_is_deterministic() -> None:
+    model = MiniGPT(MiniGPTConfig(vocab_size=5, block_size=4, hidden_dim=12, num_heads=3))
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.zero_()
+        model.lm_head.bias[3] = 10.0
+
+    output = generate(
+        model,
+        torch.tensor([1], dtype=torch.long),
+        max_new_tokens=3,
+        temperature=0,
+    )
+
+    assert output.tolist() == [1, 3, 3, 3]
+
+
+def test_generate_accepts_top_p() -> None:
+    torch.manual_seed(0)
+    model = MiniGPT(MiniGPTConfig(vocab_size=8, block_size=4, hidden_dim=12, num_heads=3))
+
+    output = generate(
+        model,
+        torch.tensor([1, 2], dtype=torch.long),
+        max_new_tokens=2,
+        top_p=0.8,
+        generator=torch.Generator().manual_seed(0),
+    )
+
+    assert output.shape == (4,)
 
 
 def test_generate_stops_at_eos_token() -> None:

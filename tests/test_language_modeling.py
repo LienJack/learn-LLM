@@ -3,6 +3,7 @@ from torch import nn
 
 from src.models.bigram_lm import (
     BigramLanguageModel,
+    CountBigramLM,
     LanguageModelingConfig,
     generate,
     language_modeling_loss,
@@ -35,12 +36,55 @@ def test_bigram_language_model_outputs_logits_and_loss() -> None:
     assert loss.ndim == 0
 
 
+def test_count_bigram_lm_add_one_smoothing_gives_unseen_pairs_probability() -> None:
+    model = CountBigramLM(vocab_size=4, smoothing=1.0).fit(
+        torch.tensor([0, 1, 0, 1], dtype=torch.long),
+    )
+
+    probs = model.next_probs(0)
+
+    assert probs[1] > probs[2]
+    assert probs[2] > 0
+    assert torch.allclose(probs.sum(), torch.tensor(1.0))
+
+
+def test_count_bigram_lm_reports_nll_and_generates_with_eos() -> None:
+    model = CountBigramLM(vocab_size=3, smoothing=0.0).fit(
+        torch.tensor([0, 1, 2, 2], dtype=torch.long),
+    )
+
+    nll = model.nll(torch.tensor([0, 1, 2], dtype=torch.long))
+    generated = model.generate(
+        start_id=0,
+        max_new_tokens=5,
+        eos_token_id=2,
+        generator=torch.Generator().manual_seed(0),
+    )
+
+    assert nll.item() == 0.0
+    assert generated.tolist() == [0, 1, 2]
+
+
 def test_language_modeling_loss_matches_cross_entropy_flattening() -> None:
     logits = torch.randn(2, 3, 4)
     labels = torch.tensor([[0, 1, 2], [3, 2, 1]], dtype=torch.long)
 
     loss = language_modeling_loss(logits, labels)
     expected = nn.functional.cross_entropy(logits.reshape(6, 4), labels.reshape(6))
+
+    assert torch.allclose(loss, expected)
+
+
+def test_language_modeling_loss_ignores_masked_labels() -> None:
+    logits = torch.randn(1, 3, 4)
+    labels = torch.tensor([[0, -100, 2]], dtype=torch.long)
+
+    loss = language_modeling_loss(logits, labels)
+    expected = nn.functional.cross_entropy(
+        logits.reshape(3, 4),
+        labels.reshape(3),
+        ignore_index=-100,
+    )
 
     assert torch.allclose(loss, expected)
 
@@ -95,6 +139,21 @@ def test_sample_next_token_respects_top_p() -> None:
     ]
 
     assert set(samples) == {0}
+
+
+def test_sample_next_token_temperature_zero_is_greedy() -> None:
+    logits = torch.tensor([0.0, 1.0, 10.0, 9.0])
+
+    samples = [
+        sample_next_token(
+            logits,
+            temperature=0,
+            generator=torch.Generator().manual_seed(seed),
+        ).item()
+        for seed in range(10)
+    ]
+
+    assert samples == [2] * 10
 
 
 def test_perplexity_matches_exp_loss() -> None:

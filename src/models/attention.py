@@ -26,7 +26,7 @@ def scaled_dot_product_attention(
     causal: bool = True,
     attention_mask: Tensor | None = None,
 ) -> AttentionOutput:
-    """Computes scaled dot-product attention for tensors shaped (B, T, H)."""
+    """Computes full-sequence self-attention for tensors shaped (B, T, H)."""
 
     if q.ndim != 3 or k.ndim != 3 or v.ndim != 3:
         raise ValueError("q, k, and v must all have shape (batch, time, hidden).")
@@ -40,10 +40,13 @@ def scaled_dot_product_attention(
         time_steps = q.size(-2)
         allowed = causal_mask(time_steps, device=q.device).unsqueeze(0)
 
+    query_mask: Tensor | None = None
     if attention_mask is not None:
         if attention_mask.shape != q.shape[:2]:
             raise ValueError("attention_mask must have shape (batch, time).")
-        key_mask = attention_mask.to(dtype=torch.bool, device=q.device)[:, None, :]
+        padding_mask = attention_mask.to(dtype=torch.bool, device=q.device)
+        key_mask = padding_mask[:, None, :]
+        query_mask = padding_mask[:, :, None]
         allowed = key_mask if allowed is None else allowed & key_mask
 
     if allowed is not None:
@@ -56,7 +59,11 @@ def scaled_dot_product_attention(
             torch.finfo(weights.dtype).eps,
         )
         weights = weights / normalizer
+    if query_mask is not None:
+        weights = weights.masked_fill(~query_mask, 0.0)
     values = weights @ v
+    if query_mask is not None:
+        values = values.masked_fill(~query_mask, 0.0)
     return AttentionOutput(values=values, weights=weights, scores=scores)
 
 

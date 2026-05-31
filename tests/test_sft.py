@@ -4,10 +4,12 @@ import pytest
 
 from src.data.text_datasets import IGNORE_INDEX, ChatMessage
 from src.finetune.sft import (
+    EvidenceReference,
     SFTExample,
     assert_no_split_leakage,
     build_sft_batch_item,
     compare_behaviors,
+    debug_labels,
     dump_sft_jsonl,
     load_sft_jsonl,
     render_training_text,
@@ -23,6 +25,12 @@ def make_example(example_id: str = "sft_001", source_group: str = "doc_a") -> SF
         id=example_id,
         source="manual",
         source_group=source_group,
+        task_type="concept_explain",
+        answerability="answerable",
+        template_version="chat_template_v1",
+        evidence_ids=[
+            EvidenceReference(source_id="lesson_03", span_id="span_001", support_level="full"),
+        ],
         risk_tags=["teaching"],
         messages=[
             ChatMessage(role="system", content="你是技术助教"),
@@ -63,6 +71,7 @@ def test_load_and_dump_sft_jsonl_round_trip(tmp_path) -> None:
 
     assert loaded == [example]
     assert json.loads(path.read_text().splitlines()[0])["id"] == "sft_001"
+    assert json.loads(path.read_text().splitlines()[0])["sample_id"] == "sft_001"
 
 
 def test_render_training_text_contains_assistant_boundary() -> None:
@@ -81,6 +90,16 @@ def test_sft_labels_mask_system_user_and_padding() -> None:
 
     assert supervised == "只能看历史 token"
     assert item.labels[-1].item() == IGNORE_INDEX
+
+
+def test_debug_labels_exposes_token_role_and_loss_mask() -> None:
+    tokenizer = CharacterTokenizer.from_texts([render_training_text(make_example())])
+
+    rows = debug_labels(make_example(), tokenizer, max_length=80)
+
+    assert any(row.role == "assistant" and row.contributes_to_loss for row in rows)
+    assert all(not row.contributes_to_loss for row in rows if row.role in {"system", "user"})
+    assert all(row.label == IGNORE_INDEX for row in rows if row.role == "padding")
 
 
 def test_split_by_source_group_prevents_group_leakage() -> None:
